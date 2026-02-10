@@ -1,4 +1,4 @@
-﻿ using UnityEngine;
+﻿using UnityEngine;
 #if ENABLE_INPUT_SYSTEM 
 using UnityEngine.InputSystem;
 #endif
@@ -59,6 +59,13 @@ namespace StarterAssets
         [Tooltip("What layers the character uses as ground")]
         public LayerMask GroundLayers;
 
+        [Header("Combat")]
+        [Tooltip("Time window to chain next attack in combo")]
+        public float ComboWindow = 1.0f;
+
+        [Tooltip("Cooldown time after completing or missing a combo")]
+        public float AttackCooldown = 0.5f;
+
         [Header("Cinemachine")]
         [Tooltip("The follow target set in the Cinemachine Virtual Camera that the camera will follow")]
         public GameObject CinemachineCameraTarget;
@@ -91,12 +98,23 @@ namespace StarterAssets
         private float _jumpTimeoutDelta;
         private float _fallTimeoutDelta;
 
+        // combat
+        private int _attackCount = 0;
+        private float _lastAttackTime = 0f;
+        private float _attackCooldownTimer = 0f;
+        private bool _isAttacking = false;
+        private bool _attackQueued = false;
+        private int _lastProcessedAttackCount = 0; // Track last processed attack to prevent double-triggering
+
         // animation IDs
         private int _animIDSpeed;
         private int _animIDGrounded;
         private int _animIDJump;
         private int _animIDFreeFall;
         private int _animIDMotionSpeed;
+        private int _animIDAttack1;
+        private int _animIDAttack2;
+        private int _animIDAttack3;
 
 #if ENABLE_INPUT_SYSTEM 
         private PlayerInput _playerInput;
@@ -159,6 +177,7 @@ namespace StarterAssets
             JumpAndGravity();
             GroundedCheck();
             Move();
+            HandleAttack();
         }
 
         private void LateUpdate()
@@ -173,6 +192,9 @@ namespace StarterAssets
             _animIDJump = Animator.StringToHash("Jump");
             _animIDFreeFall = Animator.StringToHash("FreeFall");
             _animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
+            _animIDAttack1 = Animator.StringToHash("Attack1");
+            _animIDAttack2 = Animator.StringToHash("Attack2");
+            _animIDAttack3 = Animator.StringToHash("Attack3");
         }
 
         private void GroundedCheck()
@@ -213,10 +235,33 @@ namespace StarterAssets
 
         private void Move()
         {
+            // Block movement during attack animations
+            bool isInAttackState = false;
+            if (_hasAnimator)
+            {
+                AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+                isInAttackState = currentState.IsName("Attack_1") || 
+                                 currentState.IsName("Attack_2") || 
+                                 currentState.IsName("Attack_3");
+            }
+            
+            // Don't allow movement during attack
+            if (isInAttackState)
+            {
+                _speed = 0f;
+                _animationBlend = Mathf.Lerp(_animationBlend, 0f, Time.deltaTime * SpeedChangeRate);
+                
+                // Update animator
+                if (_hasAnimator)
+                {
+                    _animator.SetFloat(_animIDSpeed, _animationBlend);
+                    _animator.SetFloat(_animIDMotionSpeed, 0f);
+                }
+                return; // Exit early - no movement during attack
+            }
+            
             // set target speed based on move speed, sprint speed and if sprint is pressed
             float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
-
-            // a simplistic acceleration and deceleration designed to be easy to remove, replace, or iterate upon
 
             // note: Vector2's == operator uses approximation so is not floating point error prone, and is cheaper than magnitude
             // if there is no input, set the target speed to 0
@@ -276,6 +321,164 @@ namespace StarterAssets
             {
                 _animator.SetFloat(_animIDSpeed, _animationBlend);
                 _animator.SetFloat(_animIDMotionSpeed, inputMagnitude);
+            }
+        }
+
+        private void HandleAttack()
+        {
+            // Update cooldown timer
+            if (_attackCooldownTimer > 0)
+            {
+                _attackCooldownTimer -= Time.deltaTime;
+                return;
+            }
+
+            // Check if we're currently in an attack state
+            bool isInAttackState = false;
+            float normalizedTime = 0f;
+            string currentStateName = "";
+            
+            if (_hasAnimator)
+            {
+                AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+                isInAttackState = currentState.IsName("Attack_1") || 
+                                 currentState.IsName("Attack_2") || 
+                                 currentState.IsName("Attack_3");
+                normalizedTime = currentState.normalizedTime % 1f;
+                
+                if (currentState.IsName("Attack_1")) currentStateName = "Attack_1";
+                else if (currentState.IsName("Attack_2")) currentStateName = "Attack_2";
+                else if (currentState.IsName("Attack_3")) currentStateName = "Attack_3";
+            }
+
+            // Reset combo if timeout and not attacking
+            if (!isInAttackState && Time.time - _lastAttackTime > ComboWindow && _attackCount > 0)
+            {
+                _attackCount = 0;
+                _attackQueued = false;
+                _lastProcessedAttackCount = 0;
+                _attackCooldownTimer = AttackCooldown;
+            }
+
+            // Handle attack input
+            if (_input.attack)
+            {
+                _input.attack = false;
+                
+                if (Grounded && _attackCooldownTimer <= 0)
+                {
+                    if (!isInAttackState)
+                    {
+                        // Start new combo - only when NOT attacking
+                        _attackCount = 1;
+                        _lastAttackTime = Time.time;
+                        _attackQueued = false;
+                        _lastProcessedAttackCount = 0;
+                        
+                        if (_hasAnimator)
+                        {
+                            // Clear all triggers to prevent auto-replay
+                            _animator.ResetTrigger(_animIDAttack1);
+                            _animator.ResetTrigger(_animIDAttack2);
+                            _animator.ResetTrigger(_animIDAttack3);
+                            _animator.SetTrigger(_animIDAttack1);
+                        }
+                    }
+                    else if (_attackCount > 0 && _attackCount < 3)
+                    {
+                        // Queue next attack - but DON'T set Attack1 trigger
+                        _attackQueued = true;
+                    }
+                }
+            }
+            else
+            {
+                // Clear queue if no input
+                if (isInAttackState && _attackQueued)
+                {
+                    _attackQueued = false;
+                }
+            }
+
+            // Process queued attack ONLY when we're in the correct state
+            if (_attackQueued && isInAttackState && _attackCount > 0)
+            {
+                // Verify we're in the expected state for current attack count
+                bool canProcess = false;
+                
+                if (_attackCount == 1 && currentStateName == "Attack_1" && _lastProcessedAttackCount != 1)
+                {
+                    canProcess = true;
+                }
+                else if (_attackCount == 2 && currentStateName == "Attack_2" && _lastProcessedAttackCount != 2)
+                {
+                    canProcess = true;
+                }
+                
+                // Only process if in correct state and at proper timing
+                if (canProcess && normalizedTime >= 0.4f && normalizedTime < 0.95f)
+                {
+                    _attackQueued = false;
+                    _lastProcessedAttackCount = _attackCount;
+                    _attackCount++;
+                    _lastAttackTime = Time.time;
+                    
+                    if (_hasAnimator)
+                    {
+                        // Clear all triggers before setting new one
+                        _animator.ResetTrigger(_animIDAttack1);
+                        _animator.ResetTrigger(_animIDAttack2);
+                        _animator.ResetTrigger(_animIDAttack3);
+                        
+                        switch (_attackCount)
+                        {
+                            case 2:
+                                _animator.SetTrigger(_animIDAttack2);
+                                break;
+                            case 3:
+                                _animator.SetTrigger(_animIDAttack3);
+                                break;
+                        }
+                        
+                        if (_attackCount >= 3)
+                        {
+                            _attackCount = 0;
+                            _lastProcessedAttackCount = 0;
+                            _attackCooldownTimer = AttackCooldown;
+                        }
+                    }
+                }
+            }
+            
+            // Clear any leftover triggers when not in attack state
+            if (!isInAttackState && _hasAnimator && _attackCount == 0)
+            {
+                _animator.ResetTrigger(_animIDAttack1);
+                _animator.ResetTrigger(_animIDAttack2);
+                _animator.ResetTrigger(_animIDAttack3);
+            }
+        }
+
+        private void OnAnimatorMove()
+        {
+            // Apply root motion from animator to CharacterController during attacks
+            // This allows attack animations to move the character and keep the new position
+            if (_hasAnimator && _controller != null)
+            {
+                AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+                bool isInAttackState = currentState.IsName("Attack_1") || 
+                                     currentState.IsName("Attack_2") || 
+                                     currentState.IsName("Attack_3");
+                
+                if (isInAttackState)
+                {
+                    // Get root motion delta from animator
+                    Vector3 rootMotionDelta = _animator.deltaPosition;
+                    
+                    // Apply root motion to CharacterController
+                    // This moves the character and keeps the new position (no snap back)
+                    _controller.Move(rootMotionDelta);
+                }
             }
         }
 

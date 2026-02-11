@@ -70,17 +70,8 @@ namespace StarterAssets
         [Tooltip("Cooldown time for ultimate skill in seconds")]
         public float UltimateCooldown = 15.0f;
 
-        [Tooltip("Duration of ultimate animation")]
-        public float UltimateDuration = 3.0f;
-
         [Tooltip("Enable/disable ultimate skill")]
         public bool UltimateEnabled = true;
-
-        [Tooltip("Upward force applied when ultimate is activated")]
-        public float UltimateJumpForce = 5.0f;
-
-        [Tooltip("Additional upward velocity during ultimate animation")]
-        public float UltimateAirBoost = 2.0f;
 
         [Header("Cinemachine")]
         [Tooltip("The follow target set in the Cinemachine Virtual Camera that the camera will follow")]
@@ -118,7 +109,6 @@ namespace StarterAssets
         private int _attackCount = 0;
         private float _lastAttackTime = 0f;
         private float _attackCooldownTimer = 0f;
-        private bool _isAttacking = false;
         private bool _attackQueued = false;
         private int _lastProcessedAttackCount = 0;
 

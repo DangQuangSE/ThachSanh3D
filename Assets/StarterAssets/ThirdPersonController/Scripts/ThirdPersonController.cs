@@ -277,19 +277,21 @@ namespace StarterAssets
                 isInUltimateState = currentState.IsName("UntimateAttack_1");
             }
             
-            // Don't allow movement during attack or ultimate
+            // Don't allow HORIZONTAL movement during attack or ultimate, but ALLOW vertical (gravity)
             if (isInAttackState || isInUltimateState)
             {
-                _speed = 0f;
-                _animationBlend = Mathf.Lerp(_animationBlend, 0f, Time.deltaTime * SpeedChangeRate);
+                // Apply ONLY vertical movement (gravity)
+                Vector3 verticalMove = new Vector3(0.0f, _verticalVelocity, 0.0f);
+                _controller.Move(verticalMove * Time.deltaTime);
                 
-                // Update animator
+                // Update animator to show no horizontal speed
                 if (_hasAnimator)
                 {
-                    _animator.SetFloat(_animIDSpeed, _animationBlend);
+                    _animator.SetFloat(_animIDSpeed, 0f);
                     _animator.SetFloat(_animIDMotionSpeed, 0f);
                 }
-                return; // Exit early - no movement during attack/ultimate
+                
+                return; // Exit early - no horizontal movement during attack/ultimate
             }
             
             // set target speed based on move speed, sprint speed and if sprint is pressed
@@ -607,12 +609,23 @@ namespace StarterAssets
                 }
                 else if (isInUltimateState)
                 {
-                    // FULL ROOT MOTION for ultimate: XYZ movement from animation
                     Vector3 rootMotionDelta = _animator.deltaPosition;
-                    _controller.Move(rootMotionDelta);
+                    float normalizedTime = currentState.normalizedTime % 1f;
                     
-                    // Disable gravity during ultimate animation
-                    _verticalVelocity = 0f;
+                    // Phase 1 (0-35%): Jump up - FULL root motion (XYZ) + disable gravity
+                    if (normalizedTime < 0.35f)
+                    {
+                        _controller.Move(rootMotionDelta);
+                        _verticalVelocity = 0f;
+                    }
+                    // Phase 2 (35-100%): Attack and fall - XZ from animation + enable gravity
+                    else
+                    {
+                        // Only horizontal movement from animation
+                        Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                        _controller.Move(horizontalMotion);
+                        // DON'T touch _verticalVelocity - let gravity work!
+                    }
                 }
             }
         }
@@ -639,13 +652,23 @@ namespace StarterAssets
             }
             else if (isInUltimateState)
             {
-                // FULL ROOT MOTION for ultimate:
-                // Let animation control ALL movement including jump/fall (XYZ)
                 Vector3 rootMotionDelta = _animator.deltaPosition;
-                _controller.Move(rootMotionDelta);
+                float normalizedTime = currentState.normalizedTime % 1f;
                 
-                // Disable gravity during ultimate animation
-                _verticalVelocity = 0f;
+                // Phase 1 (0-35%): Jump up - FULL root motion (XYZ) + disable gravity
+                if (normalizedTime < 0.35f)
+                {
+                    _controller.Move(rootMotionDelta);
+                    _verticalVelocity = 0f;
+                }
+                // Phase 2 (35-100%): Attack and fall - XZ from animation + enable gravity
+                else
+                {
+                    // Only horizontal movement from animation
+                    Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                    _controller.Move(horizontalMotion);
+                    // DON'T touch _verticalVelocity - let gravity work!
+                }
             }
         }
 

@@ -126,7 +126,6 @@ namespace StarterAssets
         private float _ultimateCooldownTimer = 0f;
         private bool _isUltimateReady = true;
         private bool _isPerformingUltimate = false;
-        private bool _debugLoggedOnce = false; // Debug flag
 
         // animation IDs
         private int _animIDSpeed;
@@ -203,15 +202,7 @@ namespace StarterAssets
             HandleAttack();
             HandleUltimate();
             
-            // DEBUG: Check applyRootMotion status (only log once)
-            if (_hasAnimator && !_debugLoggedOnce)
-            {
-                Debug.Log($"[DEBUG ONCE] applyRootMotion = {_animator.applyRootMotion}");
-                _debugLoggedOnce = true;
-            }
-            
-            // OPTION 2: Manual root motion handling when "Apply Root Motion = Handled by Script"
-            // This is needed because Unity Starter Assets uses "Handled by Script" which doesn't call OnAnimatorMove()
+            // Manual root motion handling when "Apply Root Motion = Handled by Script"
             if (_hasAnimator && !_animator.applyRootMotion)
             {
                 ApplyRootMotionManually();
@@ -436,7 +427,6 @@ namespace StarterAssets
                 // Clear queue if no input
                 if (isInAttackState && _attackQueued)
                 {
-                    Debug.Log("Clearing attack queue (no input)");
                     _attackQueued = false;
                 }
             }
@@ -459,7 +449,6 @@ namespace StarterAssets
                 // Only process if in correct state and at proper timing
                 if (canProcess && normalizedTime >= 0.4f && normalizedTime < 0.95f)
                 {
-                    Debug.Log($"Processing queued attack: {_attackCount}");
                     _attackQueued = false;
                     _lastProcessedAttackCount = _attackCount;
                     _attackCount++;
@@ -519,7 +508,7 @@ namespace StarterAssets
             if (_hasAnimator)
             {
                 AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
-                isInUltimateState = currentState.IsName("UntimateAttack_1");
+                isInUltimateState = currentState.IsName("UntimateAttack");
                 
                 if (isInUltimateState)
                 {
@@ -531,9 +520,8 @@ namespace StarterAssets
                 }
                 else if (_isPerformingUltimate)
                 {
-                    // Just finished ultimate - re-enable gravity
+                    // Just finished ultimate - gravity will automatically resume
                     _isPerformingUltimate = false;
-                    Debug.Log("[Ultimate] Animation finished, re-enabling gravity");
                 }
             }
 
@@ -593,22 +581,22 @@ namespace StarterAssets
                     _ultimateCooldownTimer = UltimateCooldown;
                     _isPerformingUltimate = true;
 
-                    Debug.Log("Ultimate skill activated! (FULL ROOT MOTION mode)");
+                    Debug.Log("Ultimate skill activated!");
                 }
             }
         }
 
         private void OnAnimatorMove()
         {
-            // Apply root motion from animator to CharacterController during attacks and ultimate
-            // This allows attack/ultimate animations to move the character and keep the new position
+            // This callback is only used when Animator "Apply Root Motion" is TRUE
+            // For "Handled by Script" mode, use ApplyRootMotionManually() instead
             if (_hasAnimator && _controller != null)
             {
                 AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
                 bool isInAttackState = currentState.IsName("Attack_1") || 
                                      currentState.IsName("Attack_2") || 
                                      currentState.IsName("Attack_3");
-                bool isInUltimateState = currentState.IsName("UntimateAttack");
+                bool isInUltimateState = currentState.IsName("UntimateAttack_1");
                 
                 if (isInAttackState)
                 {
@@ -619,20 +607,12 @@ namespace StarterAssets
                 }
                 else if (isInUltimateState)
                 {
-                    // FULL ROOT MOTION for ultimate:
-                    // Let animation control ALL movement including jump/fall (XYZ)
-                    // This ensures animation timing matches visual movement
+                    // FULL ROOT MOTION for ultimate: XYZ movement from animation
                     Vector3 rootMotionDelta = _animator.deltaPosition;
                     _controller.Move(rootMotionDelta);
                     
-                    // IMPORTANT: Disable gravity during ultimate animation
-                    // to let animation fully control vertical movement
+                    // Disable gravity during ultimate animation
                     _verticalVelocity = 0f;
-                    
-                    // Debug: Log root motion to verify animation has movement data
-                    Debug.Log($"[Ultimate Root Motion FULL] Delta: {rootMotionDelta} | " +
-                              $"Magnitude: {rootMotionDelta.magnitude:F6} | " +
-                              $"NormalizedTime: {currentState.normalizedTime:F3}");
                 }
             }
         }
@@ -641,35 +621,14 @@ namespace StarterAssets
         {
             // This method handles root motion when Animator is set to "Handled by Script"
             // It's called every frame from Update() if applyRootMotion is false
+            
+            if (!_animator || !_hasAnimator || !_controller) return;
     
             AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
             bool isInAttackState = currentState.IsName("Attack_1") || 
                                  currentState.IsName("Attack_2") || 
                                  currentState.IsName("Attack_3");
             bool isInUltimateState = currentState.IsName("UntimateAttack_1");
-            
-            // DEBUG: Detailed logging for ultimate state detection
-            if (_isPerformingUltimate)
-            {
-                Debug.Log($"[DEBUG ApplyRootMotionManually] " +
-                          $"_isPerformingUltimate={_isPerformingUltimate} | " +
-                          $"isInUltimateState={isInUltimateState} | " +
-                          $"CurrentStateHash={currentState.shortNameHash} | " +
-                          $"FullPathHash={currentState.fullPathHash} | " +
-                          $"NormalizedTime={currentState.normalizedTime:F3} | " +
-                          $"IsTransitioning={_animator.IsInTransition(0)}");
-                
-                // Log all current states for debugging
-                for (int i = 0; i < _animator.layerCount; i++)
-                {
-                    AnimatorStateInfo layerState = _animator.GetCurrentAnimatorStateInfo(i);
-                    AnimatorClipInfo[] clipInfo = _animator.GetCurrentAnimatorClipInfo(i);
-                    if (clipInfo.Length > 0)
-                    {
-                        Debug.Log($"  Layer {i}: State={layerState.shortNameHash}, Clip={clipInfo[0].clip.name}");
-                    }
-                }
-            }
             
             if (isInAttackState)
             {
@@ -682,18 +641,11 @@ namespace StarterAssets
             {
                 // FULL ROOT MOTION for ultimate:
                 // Let animation control ALL movement including jump/fall (XYZ)
-                // This ensures animation timing matches visual movement
                 Vector3 rootMotionDelta = _animator.deltaPosition;
                 _controller.Move(rootMotionDelta);
                 
-                // IMPORTANT: Disable gravity during ultimate animation
-                // to let animation fully control vertical movement
+                // Disable gravity during ultimate animation
                 _verticalVelocity = 0f;
-                
-                // Debug: Log root motion to verify animation has movement data
-                Debug.Log($"[Ultimate Root Motion FULL] Delta: {rootMotionDelta} | " +
-                          $"Magnitude: {rootMotionDelta.magnitude:F6} | " +
-                          $"NormalizedTime: {currentState.normalizedTime:F3}");
             }
         }
 

@@ -656,7 +656,7 @@ Expected output:
 **Solutions:**
 1. Check Animator:
    ```
-   - Does "UntimateAttack" state exist?
+   - Does "UntimateAttack_1" state exist?
    - Is animation clip assigned to state?
    - Is "Ultimate" parameter a Trigger?
    ```
@@ -724,105 +724,251 @@ Expected output:
 
 ---
 
-### Issue 5: Character Slides During Animation
+### Issue 5: Character Doesn't Move Forward During Animation
 
 **Symptoms:**
-- Character moves forward/backward during ultimate
-- Position doesn't match animation
+- Character plays animation in place
+- No forward movement like in Mixamo preview
+- Character "runs in place"
+
+**Root Cause:**
+- Animator "Apply Root Motion" setting is incorrect
+- Or root motion handling code is missing
 
 **Solutions:**
-1. Check Root Motion settings:
+#### Option 1: Using "Handled by Script" (Recommended)
+This is the approach used in Unity Starter Assets.
+
+1. **Animator Settings:**
    ```
-   Animator > Apply Root Motion: FALSE
-   (We handle it manually in OnAnimatorMove())
+   Animator Component:
+   - Apply Root Motion: FALSE (or "Handled by Script")
    ```
 
-2. Check animation import:
-   ```
-   Animation Tab:
-   - Root Transform Position (XZ):
-     - Bake Into Pose: FALSE
-     - Based Upon: Center of Mass
-   ```
-
-3. Verify OnAnimatorMove():
+2. **Add ApplyRootMotionManually() method:**
    ```csharp
-   // Must include UntimateAttack check
-   bool isInUltimateState = currentState.IsName("UntimateAttack");
-   if (isInAttackState || isInUltimateState)
+   private void Update()
    {
-       _controller.Move(rootMotionDelta);
+       _hasAnimator = TryGetComponent(out _animator);
+       JumpAndGravity();
+       GroundedCheck();
+       Move();
+       HandleAttack();
+       HandleUltimate();
+       
+       // Handle root motion manually
+       if (_hasAnimator && !_animator.applyRootMotion)
+       {
+           ApplyRootMotionManually();
+       }
+   }
+
+   private void ApplyRootMotionManually()
+   {
+       if (!_animator || !_hasAnimator || !_controller) return;
+
+       AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+       bool isInAttackState = currentState.IsName("Attack_1") || 
+                            currentState.IsName("Attack_2") || 
+                            currentState.IsName("Attack_3");
+       bool isInUltimateState = currentState.IsName("UntimateAttack_1");
+       
+       if (isInAttackState)
+       {
+           // For attacks: Only apply horizontal movement (XZ)
+           Vector3 rootMotionDelta = _animator.deltaPosition;
+           Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+           _controller.Move(horizontalMotion);
+       }
+       else if (isInUltimateState)
+       {
+           // For ultimate: Apply FULL root motion (XYZ)
+           Vector3 rootMotionDelta = _animator.deltaPosition;
+           _controller.Move(rootMotionDelta);
+           
+           // Disable gravity during ultimate to let animation control everything
+           _verticalVelocity = 0f;
+       }
    }
    ```
 
----
+3. **Update HandleUltimate():**
+   ```csharp
+   if (isInUltimateState)
+   {
+       _isPerformingUltimate = true;
+       // Don't modify _verticalVelocity here
+       // Let ApplyRootMotionManually() handle it
+   }
+   else if (_isPerformingUltimate)
+   {
+       _isPerformingUltimate = false;
+   }
+   ```
 
-## 📊 Performance Considerations
+4. **Update ultimate activation:**
+   ```csharp
+   // When activating ultimate
+   _verticalVelocity = 0f; // Reset to let root motion take over
+   _animator.SetTrigger(_animIDUltimate);
+   ```
 
-- **Cooldown Timer:** Runs every frame, very lightweight
-- **State Checks:** Only checks animator state info, minimal overhead
-- **Debug Display:** Disable in production (`showOnScreenDebug = false`)
-- **Console Logs:** Disable in production (`logToConsole = false`)
+#### Option 2: Using OnAnimatorMove() (Alternative)
+If you prefer to use Unity's callback:
 
----
+1. **Animator Settings:**
+   ```
+   Animator Component:
+   - Apply Root Motion: TRUE
+   ```
 
-## 🔄 Future Enhancements
+2. **Update OnAnimatorMove():**
+   ```csharp
+   private void OnAnimatorMove()
+   {
+       if (_hasAnimator && _controller != null)
+       {
+           AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+           bool isInAttackState = currentState.IsName("Attack_1") || 
+                                currentState.IsName("Attack_2") || 
+                                currentState.IsName("Attack_3");
+           bool isInUltimateState = currentState.IsName("UntimateAttack_1");
+           
+           if (isInAttackState)
+           {
+               Vector3 rootMotionDelta = _animator.deltaPosition;
+               Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+               _controller.Move(horizontalMotion);
+           }
+           else if (isInUltimateState)
+           {
+               Vector3 rootMotionDelta = _animator.deltaPosition;
+               _controller.Move(rootMotionDelta);
+           }
+       }
+   }
+   ```
 
-Possible additions to the system:
-
-1. **Visual Effects:**
-   - Particle effects on activation
-   - Screen shake during ultimate
-   - Slow-motion effect
-
-2. **Audio:**
-   - Voice line on activation
-   - Sound effect for hit
-   - Music sting
-
-3. **Damage System:**
-   - Deal damage to enemies in range
-   - Knockback effect
-   - Multiple hit detection
-
-4. **UI Integration:**
-   - Cooldown indicator on HUD
-   - Visual notification when ready
-   - Energy/mana bar
-
-5. **Advanced Features:**
-   - Multiple ultimate skills
-   - Ultimate upgrade system
-   - Combo finisher ultimate
-
----
-
-## 📝 Summary
-
-This implementation provides a robust, extensible ultimate skill system that:
-- ✅ Integrates seamlessly with existing combat
-- ✅ Provides clear visual feedback
-- ✅ Includes comprehensive debugging tools
-- ✅ Follows Unity best practices
-- ✅ Is fully documented and maintainable
-
-**Total Files Modified:** 4
-**Total Lines Added:** ~250
-**Testing Time:** ~10 minutes
-**Integration Difficulty:** Low
-
----
-
-## 👥 Credits
-
-- **Implementation:** AI Assistant
-- **Base Controller:** Unity Starter Assets
-- **Animations:** Mixamo
-- **Testing:** User
+**Important Notes:**
+- ⚠️ **State Name Must Match:** Make sure your animation state is named exactly `UntimateAttack_1`
+- ⚠️ **Animation Import Settings:** Root Transform Position (XZ) must have "Bake Into Pose" = FALSE
+- ⚠️ **Test Both Axes:** Check that both XZ (forward/sideways) and Y (jump/fall) motion work
 
 ---
 
-**Last Updated:** 2024
-**Version:** 1.0
-**Status:** Production Ready ✅
+### Issue 6: Character Falls Too Slowly After Ultimate
+
+**Symptoms:**
+- Character floats in air after animation ends
+- Gravity seems reduced
+- Takes too long to land
+
+**Root Cause:**
+- Vertical velocity is being reset to 0 during ultimate
+- Gravity not reapplying properly after animation
+
+**Solutions:**
+1. **Update ApplyRootMotionManually():**
+   ```csharp
+   else if (isInUltimateState)
+   {
+       Vector3 rootMotionDelta = _animator.deltaPosition;
+       _controller.Move(rootMotionDelta);
+       
+       // FULL ROOT MOTION: Let animation control Y axis
+       _verticalVelocity = 0f;
+   }
+   ```
+
+2. **Ensure gravity re-enables after ultimate:**
+   ```csharp
+   // In HandleUltimate()
+   else if (_isPerformingUltimate)
+   {
+       // Animation finished, gravity will automatically resume in JumpAndGravity()
+       _isPerformingUltimate = false;
+   }
+   ```
+
+3. **JumpAndGravity() already handles this automatically:**
+   ```csharp
+   // When not grounded, gravity applies
+   if (_verticalVelocity < _terminalVelocity)
+   {
+       _verticalVelocity += Gravity * Time.deltaTime; // -15.0 default
+   }
+   ```
+
+**Verification:**
+- After ultimate animation ends, `_verticalVelocity` should decrease by `Gravity * Time.deltaTime` each frame
+- Default gravity is -15.0, which is realistic
+- Character should land within 0.5-1 second after animation peak
+
+---
+
+### Issue 7: Animation State Name Mismatch
+
+**Symptoms:**
+- Debug log shows: `isInUltimateState=False` even though animation is playing
+- Root motion not applied
+- Character stuck in animation pose
+
+**Root Cause:**
+- State name in Animator doesn't match name in code
+- Common mismatches:
+  - `"UntimateAttack"` vs `"UntimateAttack_1"`
+  - `"UltimateAttack"` vs `"UntimateAttack"` (typo in first letter)
+
+**Solutions:**
+1. **Check Animator state name:**
+   ```
+   - Open Animator window
+   - Select the ultimate state
+   - Check exact name in Inspector
+   - Note: Unity may add "_1" suffix automatically
+   ```
+
+2. **Update all state checks in code:**
+   ```csharp
+   // In Move()
+   isInUltimateState = currentState.IsName("UntimateAttack_1");
+   
+   // In HandleUltimate()
+   isInUltimateState = currentState.IsName("UntimateAttack_1");
+   
+   // In ApplyRootMotionManually()
+   bool isInUltimateState = currentState.IsName("UntimateAttack_1");
+   ```
+
+3. **Enable debug logging temporarily:**
+   ```csharp
+   // In ApplyRootMotionManually()
+   if (_isPerformingUltimate)
+   {
+       Debug.Log($"State Check: isInUltimateState={isInUltimateState} | " +
+                 $"StateHash={currentState.fullPathHash}");
+   }
+   ```
+
+4. **Get exact state name from log:**
+   - Play ultimate animation
+   - Check console for hash value
+   - Or check Animator window state name
+
+**Prevention:**
+- Use consistent naming: Always `UntimateAttack_1` everywhere
+- Or use hash comparison instead:
+  ```csharp
+  private int _ultimateStateHash;
+  
+  void Start()
+  {
+      _ultimateStateHash = Animator.StringToHash("UntimateAttack_1");
+  }
+  
+  // Then use:
+  bool isInUltimateState = currentState.fullPathHash == _ultimateStateHash;
+  ```
+
+---
 

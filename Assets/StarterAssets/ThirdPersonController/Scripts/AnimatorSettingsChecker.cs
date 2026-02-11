@@ -69,7 +69,7 @@ namespace StarterAssets
             Debug.Log("\n?? CHECKING PARAMETERS:");
             Debug.Log("????????????????????????????????????????");
 
-            string[] requiredParams = { "Attack1", "Attack2", "Attack3" };
+            string[] requiredParams = { "Attack1", "Attack2", "Attack3", "Ultimate" };
             bool allParamsExist = true;
 
             foreach (var paramName in requiredParams)
@@ -109,7 +109,7 @@ namespace StarterAssets
             var layer = controller.layers[0];
             var stateMachine = layer.stateMachine;
 
-            string[] requiredStates = { "Attack_1", "Attack_2", "Attack_3" };
+            string[] requiredStates = { "Attack_1", "Attack_2", "Attack_3", "UntimateAttack" };
             bool allStatesExist = true;
 
             foreach (var stateName in requiredStates)
@@ -153,6 +153,7 @@ namespace StarterAssets
             var attack1 = System.Array.Find(stateMachine.states, s => s.state.name == "Attack_1");
             var attack2 = System.Array.Find(stateMachine.states, s => s.state.name == "Attack_2");
             var attack3 = System.Array.Find(stateMachine.states, s => s.state.name == "Attack_3");
+            var ultimate = System.Array.Find(stateMachine.states, s => s.state.name == "UntimateAttack");
 
             Debug.Log($"\n?? Default State: {entryState?.name ?? "NONE"}");
 
@@ -196,6 +197,15 @@ namespace StarterAssets
             CheckReturnToIdle(attack1.state, "Attack_1", entryState);
             CheckReturnToIdle(attack2.state, "Attack_2", entryState);
             CheckReturnToIdle(attack3.state, "Attack_3", entryState);
+
+            // Check Ultimate transition
+            if (ultimate.state != null)
+            {
+                Debug.Log("\n?? Checking Ultimate Transition:");
+                Debug.Log("  ? Ultimate should transition from Any State");
+                Debug.Log("  ? Check manually: Any State ? UntimateAttack");
+                CheckReturnToIdle(ultimate.state, "UntimateAttack", entryState);
+            }
         }
 
         private static void CheckTransition(
@@ -295,7 +305,7 @@ namespace StarterAssets
             {
                 if (transition.conditions.Length == 0)
                 {
-                    Debug.LogError($"  ? MISSING Condition: {conditionParam}" );
+                    Debug.LogError($"  ? MISSING Condition: {conditionParam}");
                     allCorrect = false;
                 }
                 else

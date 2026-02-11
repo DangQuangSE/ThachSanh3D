@@ -3,22 +3,22 @@ using UnityEngine;
 namespace StarterAssets
 {
     /// <summary>
-    /// Helper script ?? debug Attack System
-    /// G?n script này vào Player GameObject ?? xem thông tin debug
+    /// Helper script to debug Attack System
+    /// Attach this script to Player GameObject to view debug information
     /// </summary>
     public class AttackSystemDebugger : MonoBehaviour
     {
         [Header("References")]
-        [Tooltip("T? ??ng l?y t? GameObject")]
+        [Tooltip("Automatically retrieved from GameObject")]
         private ThirdPersonController _controller;
         private Animator _animator;
         private StarterAssetsInputs _input;
 
         [Header("Debug Settings")]
-        [Tooltip("Hi?n th? debug info trên màn hình")]
+        [Tooltip("Display debug info on screen")]
         public bool showOnScreenDebug = true;
         
-        [Tooltip("Log ra Console")]
+        [Tooltip("Log to Console")]
         public bool logToConsole = true;
 
         [Header("Debug Info (Read Only)")]
@@ -31,16 +31,16 @@ namespace StarterAssets
 
         private void Start()
         {
-            // T? ??ng l?y references
+            // Automatically get references
             _controller = GetComponent<ThirdPersonController>();
             _animator = GetComponent<Animator>();
             _input = GetComponent<StarterAssetsInputs>();
 
             if (_controller == null)
-                Debug.LogError("AttackSystemDebugger: Không tìm th?y ThirdPersonController component!");
+                Debug.LogError("AttackSystemDebugger: ThirdPersonController component not found!");
             
             if (_animator == null)
-                Debug.LogWarning("AttackSystemDebugger: Không tìm th?y Animator component!");
+                Debug.LogWarning("AttackSystemDebugger: Animator component not found!");
             
             if (_input == null)
                 Debug.LogError("AttackSystemDebugger: Không tìm th?y StarterAssetsInputs component!");

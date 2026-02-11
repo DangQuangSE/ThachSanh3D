@@ -7,8 +7,8 @@ using UnityEditor.Animations;
 namespace StarterAssets
 {
     /// <summary>
-    /// Script ki?m tra Animator settings ?? debug combo attack
-    /// Ch?y script này t? Unity Editor: Tools > Check Animator Settings
+    /// Script to check Animator settings for debugging combo attacks
+    /// Run this script from Unity Editor: Tools > Check Animator Settings
     /// </summary>
     public class AnimatorSettingsChecker : MonoBehaviour
     {
@@ -16,12 +16,12 @@ namespace StarterAssets
         [MenuItem("Tools/Check Animator Settings")]
         public static void CheckAnimatorSettings()
         {
-            // Tìm Player GameObject
+            // Find Player GameObject
             GameObject player = GameObject.FindGameObjectWithTag("Player");
             
             if (player == null)
             {
-                Debug.LogError("? KHÔNG TÌM TH?Y PLAYER! Hãy tag GameObject là 'Player'");
+                Debug.LogError("? PLAYER NOT FOUND! Please tag GameObject as 'Player'");
                 return;
             }
 
@@ -29,23 +29,23 @@ namespace StarterAssets
             
             if (animator == null)
             {
-                Debug.LogError("? Player không có Animator component!");
+                Debug.LogError("? Player does not have Animator component!");
                 return;
             }
 
             if (animator.runtimeAnimatorController == null)
             {
-                Debug.LogError("? Animator không có Controller!");
+                Debug.LogError("? Animator does not have Controller!");
                 return;
             }
 
-            Debug.Log("=== ?? B?T ??U KI?M TRA ANIMATOR SETTINGS ===\n");
+            Debug.Log("=== ? STARTING ANIMATOR SETTINGS CHECK ===\n");
 
             AnimatorController controller = animator.runtimeAnimatorController as AnimatorController;
             
             if (controller == null)
             {
-                Debug.LogError("? Không th? cast sang AnimatorController!");
+                Debug.LogError("? Cannot cast to AnimatorController!");
                 return;
             }
 
@@ -61,12 +61,12 @@ namespace StarterAssets
             // Check Root Motion
             CheckRootMotion(animator);
 
-            Debug.Log("\n=== ? HOÀN THÀNH KI?M TRA ===");
+            Debug.Log("\n=== ? CHECK COMPLETED ===");
         }
 
         private static void CheckParameters(AnimatorController controller)
         {
-            Debug.Log("\n?? KI?M TRA PARAMETERS:");
+            Debug.Log("\n?? CHECKING PARAMETERS:");
             Debug.Log("????????????????????????????????????????");
 
             string[] requiredParams = { "Attack1", "Attack2", "Attack3" };
@@ -78,18 +78,18 @@ namespace StarterAssets
                 
                 if (param == null)
                 {
-                    Debug.LogError($"? THI?U Parameter: {paramName}");
+                    Debug.LogError($"? MISSING Parameter: {paramName}");
                     allParamsExist = false;
                 }
                 else
                 {
                     if (param.type == AnimatorControllerParameterType.Trigger)
                     {
-                        Debug.Log($"? {paramName}: Trigger (?ÚNG)");
+                        Debug.Log($"? {paramName}: Trigger (CORRECT)");
                     }
                     else
                     {
-                        Debug.LogError($"? {paramName}: {param.type} (SAI - ph?i là Trigger!)");
+                        Debug.LogError($"? {paramName}: {param.type} (WRONG - must be Trigger!)");
                         allParamsExist = false;
                     }
                 }
@@ -97,13 +97,13 @@ namespace StarterAssets
 
             if (allParamsExist)
             {
-                Debug.Log("? T?T C? PARAMETERS ?ÚNG!");
+                Debug.Log("? ALL PARAMETERS CORRECT!");
             }
         }
 
         private static void CheckStates(AnimatorController controller)
         {
-            Debug.Log("\n?? KI?M TRA STATES:");
+            Debug.Log("\n?? CHECKING STATES:");
             Debug.Log("????????????????????????????????????????");
 
             var layer = controller.layers[0];
@@ -118,31 +118,31 @@ namespace StarterAssets
                 
                 if (state.state == null)
                 {
-                    Debug.LogError($"? THI?U State: {stateName}");
+                    Debug.LogError($"? MISSING State: {stateName}");
                     allStatesExist = false;
                 }
                 else
                 {
                     if (state.state.motion != null)
                     {
-                        Debug.Log($"? {stateName}: Có animation '{state.state.motion.name}'");
+                        Debug.Log($"? {stateName}: Has animation '{state.state.motion.name}'");
                     }
                     else
                     {
-                        Debug.LogWarning($"?? {stateName}: CH?A GÁN ANIMATION!");
+                        Debug.LogWarning($"? {stateName}: NO ANIMATION ASSIGNED!");
                     }
                 }
             }
 
             if (allStatesExist)
             {
-                Debug.Log("? T?T C? STATES T?N T?I!");
+                Debug.Log("? ALL STATES EXIST!");
             }
         }
 
         private static void CheckTransitions(AnimatorController controller)
         {
-            Debug.Log("\n?? KI?M TRA TRANSITIONS:");
+            Debug.Log("\n?? CHECKING TRANSITIONS:");
             Debug.Log("????????????????????????????????????????");
 
             var layer = controller.layers[0];
@@ -154,7 +154,7 @@ namespace StarterAssets
             var attack2 = System.Array.Find(stateMachine.states, s => s.state.name == "Attack_2");
             var attack3 = System.Array.Find(stateMachine.states, s => s.state.name == "Attack_3");
 
-            Debug.Log($"\n?? Default State: {entryState?.name ?? "KHÔNG CÓ"}");
+            Debug.Log($"\n?? Default State: {entryState?.name ?? "NONE"}");
 
             // Check Entry ? Attack_1
             if (entryState != null)
@@ -210,11 +210,11 @@ namespace StarterAssets
             bool hasCondition,
             string conditionParam = "")
         {
-            Debug.Log($"\n? Ki?m tra: {fromName} ? {toName}");
+            Debug.Log($"\n? Checking: {fromName} ? {toName}");
 
             if (fromState == null || toState == null)
             {
-                Debug.LogError($"? State không t?n t?i!");
+                Debug.LogError($"? State does not exist!");
                 return;
             }
 
@@ -223,7 +223,7 @@ namespace StarterAssets
 
             if (transition == null)
             {
-                Debug.LogError($"? THI?U TRANSITION t? {fromName} ? {toName}");
+                Debug.LogError($"? MISSING TRANSITION from {fromName} ? {toName}");
                 return;
             }
 
@@ -232,7 +232,7 @@ namespace StarterAssets
             // Check Has Exit Time
             if (transition.hasExitTime != hasExitTime)
             {
-                Debug.LogError($"  ? Has Exit Time: {transition.hasExitTime} (C?n: {hasExitTime})");
+                Debug.LogError($"  ? Has Exit Time: {transition.hasExitTime} (Required: {hasExitTime})");
                 allCorrect = false;
             }
             else
@@ -246,7 +246,7 @@ namespace StarterAssets
                 float diff = Mathf.Abs(transition.exitTime - exitTime);
                 if (diff > 0.1f)
                 {
-                    Debug.LogWarning($"  ?? Exit Time: {transition.exitTime:F2} (Khuy?n ngh?: {exitTime:F2})");
+                    Debug.LogWarning($"  ? Exit Time: {transition.exitTime:F2} (Recommended: {exitTime:F2})");
                 }
                 else
                 {
@@ -258,7 +258,7 @@ namespace StarterAssets
             float durationDiff = Mathf.Abs(transition.duration - duration);
             if (durationDiff > 0.05f)
             {
-                Debug.LogWarning($"  ?? Transition Duration: {transition.duration:F2} (Khuy?n ngh?: {duration:F2})");
+                Debug.LogWarning($"  ? Transition Duration: {transition.duration:F2} (Recommended: {duration:F2})");
             }
             else
             {
@@ -268,7 +268,7 @@ namespace StarterAssets
             // Check Interruption Source
             if (transition.interruptionSource != interruptionSource)
             {
-                Debug.LogError($"  ? Interruption Source: {transition.interruptionSource} (C?n: {interruptionSource})");
+                Debug.LogError($"  ? Interruption Source: {transition.interruptionSource} (Required: {interruptionSource})");
                 allCorrect = false;
             }
             else
@@ -281,7 +281,7 @@ namespace StarterAssets
             {
                 if (!transition.orderedInterruption)
                 {
-                    Debug.LogError($"  ? Ordered Interruption: {transition.orderedInterruption} (C?n: true)");
+                    Debug.LogError($"  ? Ordered Interruption: {transition.orderedInterruption} (Required: true)");
                     allCorrect = false;
                 }
                 else
@@ -295,7 +295,7 @@ namespace StarterAssets
             {
                 if (transition.conditions.Length == 0)
                 {
-                    Debug.LogError($"  ? THI?U Condition: {conditionParam}");
+                    Debug.LogError($"  ? MISSING Condition: {conditionParam}" );
                     allCorrect = false;
                 }
                 else
@@ -309,7 +309,7 @@ namespace StarterAssets
                     }
                     else
                     {
-                        Debug.LogError($"  ? Condition sai: {transition.conditions[0].parameter} (C?n: {conditionParam})");
+                        Debug.LogError($"  ? Wrong Condition: {transition.conditions[0].parameter} (Required: {conditionParam})");
                         allCorrect = false;
                     }
                 }
@@ -317,7 +317,7 @@ namespace StarterAssets
 
             if (allCorrect)
             {
-                Debug.Log($"  ??? TRANSITION {fromName} ? {toName} HOÀN TOÀN ?ÚNG!");
+                Debug.Log($"  ??? TRANSITION {fromName} ? {toName} COMPLETELY CORRECT!");
             }
         }
 
@@ -325,21 +325,21 @@ namespace StarterAssets
         {
             if (attackState == null || idleState == null) return;
 
-            Debug.Log($"\n? Ki?m tra: {attackName} ? Idle");
+            Debug.Log($"\n? Checking: {attackName} ? Idle");
 
             var transition = System.Array.Find(attackState.transitions, 
                 t => t.destinationState == idleState || t.isExit);
 
             if (transition == null)
             {
-                Debug.LogWarning($"  ?? KHÔNG CÓ transition v? Idle (có th? dùng Exit)");
+                Debug.LogWarning($"  ? NO transition to Idle (can use Exit)");
                 return;
             }
 
             // Check Has Exit Time
             if (!transition.hasExitTime)
             {
-                Debug.LogError($"  ? Has Exit Time: false (C?n: true)");
+                Debug.LogError($"  ? Has Exit Time: false (Required: true)");
             }
             else
             {
@@ -349,7 +349,7 @@ namespace StarterAssets
             // Check Exit Time
             if (transition.exitTime < 0.9f)
             {
-                Debug.LogWarning($"  ?? Exit Time: {transition.exitTime:F2} (Khuy?n ngh?: 0.9-0.95)");
+                Debug.LogWarning($"  ? Exit Time: {transition.exitTime:F2} (Recommended: 0.9-0.95)");
             }
             else
             {
@@ -359,26 +359,26 @@ namespace StarterAssets
             // Check No Conditions
             if (transition.conditions.Length > 0)
             {
-                Debug.LogWarning($"  ?? Có {transition.conditions.Length} conditions (Khuy?n ngh?: Không có)");
+                Debug.LogWarning($"  ? Has {transition.conditions.Length} conditions (Recommended: None)");
             }
             else
             {
-                Debug.Log($"  ? No Conditions (t? ??ng)");
+                Debug.Log($"  ? No Conditions (automatic)");
             }
         }
 
         private static void CheckRootMotion(Animator animator)
         {
-            Debug.Log("\n?? KI?M TRA ROOT MOTION:");
+            Debug.Log("\n?? CHECKING ROOT MOTION:");
             Debug.Log("????????????????????????????????????????");
 
             if (animator.applyRootMotion)
             {
-                Debug.LogError("? Apply Root Motion: TRUE (C?n: FALSE vì dùng CharacterController)");
+                Debug.LogError("? Apply Root Motion: TRUE (Required: FALSE because using CharacterController)");
             }
             else
             {
-                Debug.Log("? Apply Root Motion: FALSE (?ÚNG!)");
+                Debug.Log("? Apply Root Motion: FALSE (CORRECT!)");
             }
 
             Debug.Log($"  Update Mode: {animator.updateMode}");

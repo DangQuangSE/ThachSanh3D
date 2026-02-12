@@ -66,6 +66,13 @@ namespace StarterAssets
         [Tooltip("Cooldown time after completing or missing a combo")]
         public float AttackCooldown = 0.5f;
 
+        [Header("Ultimate Skill")]
+        [Tooltip("Cooldown time for ultimate skill in seconds")]
+        public float UltimateCooldown = 15.0f;
+
+        [Tooltip("Enable/disable ultimate skill")]
+        public bool UltimateEnabled = true;
+
         [Header("Cinemachine")]
         [Tooltip("The follow target set in the Cinemachine Virtual Camera that the camera will follow")]
         public GameObject CinemachineCameraTarget;
@@ -102,9 +109,13 @@ namespace StarterAssets
         private int _attackCount = 0;
         private float _lastAttackTime = 0f;
         private float _attackCooldownTimer = 0f;
-        private bool _isAttacking = false;
         private bool _attackQueued = false;
-        private int _lastProcessedAttackCount = 0; // Track last processed attack to prevent double-triggering
+        private int _lastProcessedAttackCount = 0;
+
+        // ultimate
+        private float _ultimateCooldownTimer = 0f;
+        private bool _isUltimateReady = true;
+        private bool _isPerformingUltimate = false;
 
         // animation IDs
         private int _animIDSpeed;
@@ -115,6 +126,7 @@ namespace StarterAssets
         private int _animIDAttack1;
         private int _animIDAttack2;
         private int _animIDAttack3;
+        private int _animIDUltimate;
 
 #if ENABLE_INPUT_SYSTEM 
         private PlayerInput _playerInput;
@@ -178,6 +190,13 @@ namespace StarterAssets
             GroundedCheck();
             Move();
             HandleAttack();
+            HandleUltimate();
+            
+            // Manual root motion handling when "Apply Root Motion = Handled by Script"
+            if (_hasAnimator && !_animator.applyRootMotion)
+            {
+                ApplyRootMotionManually();
+            }
         }
 
         private void LateUpdate()
@@ -195,6 +214,7 @@ namespace StarterAssets
             _animIDAttack1 = Animator.StringToHash("Attack1");
             _animIDAttack2 = Animator.StringToHash("Attack2");
             _animIDAttack3 = Animator.StringToHash("Attack3");
+            _animIDUltimate = Animator.StringToHash("Ultimate");
         }
 
         private void GroundedCheck()
@@ -235,29 +255,33 @@ namespace StarterAssets
 
         private void Move()
         {
-            // Block movement during attack animations
+            // Block movement during attack animations or ultimate
             bool isInAttackState = false;
+            bool isInUltimateState = false;
             if (_hasAnimator)
             {
                 AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
                 isInAttackState = currentState.IsName("Attack_1") || 
                                  currentState.IsName("Attack_2") || 
                                  currentState.IsName("Attack_3");
+                isInUltimateState = currentState.IsName("UntimateAttack_1");
             }
             
-            // Don't allow movement during attack
-            if (isInAttackState)
+            // Don't allow HORIZONTAL movement during attack or ultimate, but ALLOW vertical (gravity)
+            if (isInAttackState || isInUltimateState)
             {
-                _speed = 0f;
-                _animationBlend = Mathf.Lerp(_animationBlend, 0f, Time.deltaTime * SpeedChangeRate);
+                // Apply ONLY vertical movement (gravity)
+                Vector3 verticalMove = new Vector3(0.0f, _verticalVelocity, 0.0f);
+                _controller.Move(verticalMove * Time.deltaTime);
                 
-                // Update animator
+                // Update animator to show no horizontal speed
                 if (_hasAnimator)
                 {
-                    _animator.SetFloat(_animIDSpeed, _animationBlend);
+                    _animator.SetFloat(_animIDSpeed, 0f);
                     _animator.SetFloat(_animIDMotionSpeed, 0f);
                 }
-                return; // Exit early - no movement during attack
+                
+                return; // Exit early - no horizontal movement during attack/ultimate
             }
             
             // set target speed based on move speed, sprint speed and if sprint is pressed
@@ -380,7 +404,6 @@ namespace StarterAssets
                             // Clear all triggers to prevent auto-replay
                             _animator.ResetTrigger(_animIDAttack1);
                             _animator.ResetTrigger(_animIDAttack2);
-                            _animator.ResetTrigger(_animIDAttack3);
                             _animator.SetTrigger(_animIDAttack1);
                         }
                     }
@@ -459,25 +482,182 @@ namespace StarterAssets
             }
         }
 
+        private void HandleUltimate()
+        {
+            // Update cooldown timer
+            if (!_isUltimateReady && _ultimateCooldownTimer > 0)
+            {
+                _ultimateCooldownTimer -= Time.deltaTime;
+                if (_ultimateCooldownTimer <= 0)
+                {
+                    _isUltimateReady = true;
+                    Debug.Log("Ultimate skill is ready!");
+                }
+            }
+
+            // Check if currently performing ultimate
+            bool isInUltimateState = false;
+            if (_hasAnimator)
+            {
+                AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+                isInUltimateState = currentState.IsName("UntimateAttack");
+                
+                if (isInUltimateState)
+                {
+                    _isPerformingUltimate = true;
+                    
+                    // IMPORTANT: Don't modify _verticalVelocity here!
+                    // Let ApplyRootMotionManually() handle it by setting to 0
+                    // This allows FULL root motion (XYZ) to control the character
+                }
+                else if (_isPerformingUltimate)
+                {
+                    // Just finished ultimate - gravity will automatically resume
+                    _isPerformingUltimate = false;
+                }
+            }
+
+            // Handle ultimate input
+            if (_input.ultimate)
+            {
+                _input.ultimate = false;
+
+                if (!UltimateEnabled)
+                {
+                    Debug.LogWarning("Ultimate skill is disabled!");
+                    return;
+                }
+
+                if (!_isUltimateReady)
+                {
+                    Debug.Log($"Ultimate on cooldown! {_ultimateCooldownTimer:F1}s remaining");
+                    return;
+                }
+
+                if (!Grounded)
+                {
+                    Debug.Log("Cannot use ultimate in air!");
+                    return;
+                }
+
+                if (_isPerformingUltimate || isInUltimateState)
+                {
+                    Debug.Log("Already performing ultimate!");
+                    return;
+                }
+
+                // Start ultimate
+                if (_hasAnimator)
+                {
+                    // Reset attack combo
+                    _attackCount = 0;
+                    _attackQueued = false;
+                    _lastProcessedAttackCount = 0;
+                    _attackCooldownTimer = 0f;
+
+                    // Clear all attack triggers
+                    _animator.ResetTrigger(_animIDAttack1);
+                    _animator.ResetTrigger(_animIDAttack2);
+                    _animator.ResetTrigger(_animIDAttack3);
+                    _animator.ResetTrigger(_animIDUltimate);
+
+                    // FULL ROOT MOTION APPROACH:
+                    // Don't apply initial jump force - let animation control everything
+                    // Just reset vertical velocity to let root motion take over
+                    _verticalVelocity = 0f;
+                    
+                    // Trigger ultimate animation
+                    _animator.SetTrigger(_animIDUltimate);
+                    
+                    _isUltimateReady = false;
+                    _ultimateCooldownTimer = UltimateCooldown;
+                    _isPerformingUltimate = true;
+
+                    Debug.Log("Ultimate skill activated!");
+                }
+            }
+        }
+
         private void OnAnimatorMove()
         {
-            // Apply root motion from animator to CharacterController during attacks
-            // This allows attack animations to move the character and keep the new position
+            // This callback is only used when Animator "Apply Root Motion" is TRUE
+            // For "Handled by Script" mode, use ApplyRootMotionManually() instead
             if (_hasAnimator && _controller != null)
             {
                 AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
                 bool isInAttackState = currentState.IsName("Attack_1") || 
                                      currentState.IsName("Attack_2") || 
                                      currentState.IsName("Attack_3");
+                bool isInUltimateState = currentState.IsName("UntimateAttack_1");
                 
                 if (isInAttackState)
                 {
-                    // Get root motion delta from animator
+                    // For attacks: Only apply horizontal movement (XZ), keep Y from gravity
                     Vector3 rootMotionDelta = _animator.deltaPosition;
+                    Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                    _controller.Move(horizontalMotion);
+                }
+                else if (isInUltimateState)
+                {
+                    Vector3 rootMotionDelta = _animator.deltaPosition;
+                    float normalizedTime = currentState.normalizedTime % 1f;
                     
-                    // Apply root motion to CharacterController
-                    // This moves the character and keeps the new position (no snap back)
+                    // Phase 1 (0-35%): Jump up - FULL root motion (XYZ) + disable gravity
+                    if (normalizedTime < 0.35f)
+                    {
+                        _controller.Move(rootMotionDelta);
+                        _verticalVelocity = 0f;
+                    }
+                    // Phase 2 (35-100%): Attack and fall - XZ from animation + enable gravity
+                    else
+                    {
+                        // Only horizontal movement from animation
+                        Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                        _controller.Move(horizontalMotion);
+                        // DON'T touch _verticalVelocity - let gravity work!
+                    }
+                }
+            }
+        }
+
+        private void ApplyRootMotionManually()
+        {
+            // This method handles root motion when Animator is set to "Handled by Script"
+            // It's called every frame from Update() if applyRootMotion is false
+            
+            if (!_animator || !_hasAnimator || !_controller) return;
+    
+            AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+            bool isInAttackState = currentState.IsName("Attack_1") || 
+                                 currentState.IsName("Attack_2") || 
+                                 currentState.IsName("Attack_3");
+            bool isInUltimateState = currentState.IsName("UntimateAttack_1");
+            
+            if (isInAttackState)
+            {
+                // For attacks: Only apply horizontal movement (XZ), keep Y from gravity
+                Vector3 rootMotionDelta = _animator.deltaPosition;
+                Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                _controller.Move(horizontalMotion);
+            }
+            else if (isInUltimateState)
+            {
+                Vector3 rootMotionDelta = _animator.deltaPosition;
+                float normalizedTime = currentState.normalizedTime % 1f;
+                
+                // Phase 1 (0-35%): Jump up - FULL root motion (XYZ) + disable gravity
+                if (normalizedTime < 0.35f)
+                {
                     _controller.Move(rootMotionDelta);
+                    _verticalVelocity = 0f;
+                }
+                // Phase 2 (35-100%): Attack and fall - XZ from animation + enable gravity
+                else
+                {
+                    // Only horizontal movement from animation
+                    Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                    _controller.Move(horizontalMotion);
+                    // DON'T touch _verticalVelocity - let gravity work!
                 }
             }
         }
@@ -590,6 +770,23 @@ namespace StarterAssets
             {
                 AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
             }
+        }
+
+        // Public methods for UI/External access
+        public float GetUltimateCooldownProgress()
+        {
+            if (_isUltimateReady) return 1f;
+            return 1f - (_ultimateCooldownTimer / UltimateCooldown);
+        }
+
+        public bool IsUltimateReady()
+        {
+            return _isUltimateReady;
+        }
+
+        public float GetUltimateRemainingCooldown()
+        {
+            return _ultimateCooldownTimer;
         }
     }
 }

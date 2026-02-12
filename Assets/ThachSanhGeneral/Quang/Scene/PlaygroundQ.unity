@@ -143,13 +143,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 293655350}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.00251, y: 0.01006, z: 0}
+  m_LocalRotation: {x: -0.7093474, y: -0.019632095, z: 0.019492999, w: 0.7043159}
+  m_LocalPosition: {x: -0.00043, y: 0.00952, z: -0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 336374537}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -86.803, y: -97.334, z: 97.322}
 --- !u!4 &336374537 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8692582226626612486, guid: 9cf6c5eecce55b04c92e17505381edaf, type: 3}
@@ -1063,23 +1063,17 @@ MonoBehaviour:
   attack1VFX: {fileID: 5503505460791601945, guid: 74c549d1b06b6b140a1fd9536eea637f, type: 3}
   attack2VFX: {fileID: 5503505460791601945, guid: 74c549d1b06b6b140a1fd9536eea637f, type: 3}
   attack3VFX: {fileID: 5503505460791601945, guid: 74c549d1b06b6b140a1fd9536eea637f, type: 3}
-  ultimateVFX: {fileID: 1400255665468144947, guid: 6c21e7a6e514dd9499418cbbb66211cf, type: 3}
+  ultimateVFX: {fileID: 1205478487176026167, guid: 8436419d5cd706242bb810378b8a8835, type: 3}
   vfxSpawnPoint: {fileID: 293655351}
   spawnOffset: {x: 0, y: 0, z: 0}
+  rotationOffset: {x: 0, y: 0, z: 0}
   vfxScale: 1
   vfxLifetime: 2
-  attack1RotationOffset: {x: 0, y: 0, z: 45}
-  attack2RotationOffset: {x: 0, y: 0, z: 45}
-  attack3RotationOffset: {x: 0, y: 0, z: 0}
-  ultimateRotationOffset: {x: 0, y: 0, z: 90}
   attack1SpawnTime: 0.4
   attack2SpawnTime: 0.4
   attack3SpawnTime: 0.4
   ultimateSpawnTime: 0.5
-  useWeaponRotation: 1
-  autoMirrorRotation: 0
   showDebugLogs: 0
-  showRotationGizmos: 1
 --- !u!4 &1950869046 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6756129690476772447, guid: 9cf6c5eecce55b04c92e17505381edaf, type: 3}

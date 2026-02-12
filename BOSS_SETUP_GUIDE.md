@@ -1,134 +1,255 @@
-# ?? H??NG D?N SETUP BOSS CONTROLLER
+# ?? BOSS CONTROLLER SETUP GUIDE
 
-## ?? M?C L?C
-1. [Yêu c?u h? th?ng](#yêu-c?u-h?-th?ng)
-2. [Chu?n b? Boss GameObject](#chu?n-b?-boss-gameobject)
+## ?? TABLE OF CONTENTS
+1. [System Requirements](#system-requirements)
+2. [Prepare Boss GameObject](#prepare-boss-gameobject)
 3. [Setup NavMesh](#setup-navmesh)
-4. [C?u hình BossController](#c?u-hình-bosscontroller)
+4. [Configure BossController](#configure-bosscontroller)
 5. [Setup Animation (Optional)](#setup-animation-optional)
-6. [T?o Attack Point](#t?o-attack-point)
-7. [Setup Layer và Collision](#setup-layer-và-collision)
+6. [Create Attack Point](#create-attack-point)
+7. [Setup Layer and Collision](#setup-layer-and-collision)
 8. [Test Boss](#test-boss)
 9. [Troubleshooting](#troubleshooting)
 
 ---
 
-## ? YÊU C?U H? TH?NG
+## ? SYSTEM REQUIREMENTS
 
-### Packages c?n thi?t:
+### Required Packages:
 - ? Unity NavMesh (AI Navigation)
-- ?? Animator (Optional - cho animation)
+- ?? Animator (Optional - for animation)
 
-### Components Boss c?n có:
+### Boss Components Required:
 - ? **BossController** script
 - ? **NavMeshAgent** component
 - ? **Collider** (Box/Capsule/Sphere)
 - ?? **Animator** (Optional)
-- ?? **Rigidbody** (Optional - n?u c?n physics)
+- ?? **Rigidbody** (Optional - if physics needed)
 
 ---
 
-## ?? B??C 1: CHU?N B? BOSS GAMEOBJECT
+## ?? STEP 1: PREPARE BOSS GAMEOBJECT
 
-### 1.1 T?o Boss GameObject
+### 1.1 Create Boss GameObject
 ```
-1. Trong Scene, t?o Empty GameObject
-   - Right click > Create Empty > ??t tên "Boss"
+1. In Scene, create Empty GameObject
+   - Right click > Create Empty > Name it "Boss"
    
-2. Ho?c dùng model 3D có s?n
-   - Kéo model Boss vào Scene
+2. Or use existing 3D model
+   - Drag Boss model into Scene
 ```
 
-### 1.2 Thêm Collider
+### 1.2 Add Collider
 ```
 1. Select Boss GameObject
-2. Add Component > Box Collider (ho?c Capsule Collider)
-3. ?i?u ch?nh size ?? v?a v?i model:
-   - Center: (0, 1, 0)  // Tùy theo model
-   - Size: (1, 2, 1)    // Tùy theo model
+2. Add Component > Box Collider (or Capsule Collider)
+3. Adjust size to fit model:
+   - Center: (0, 1, 0)  // Depends on model
+   - Size: (1, 2, 1)    // Depends on model
 ```
 
-### 1.3 Thêm NavMeshAgent
+### 1.3 Add NavMeshAgent
 ```
 1. Select Boss GameObject
 2. Add Component > Nav Mesh Agent
-3. ?? m?c ??nh settings (s? config sau)
+3. Leave default settings (will configure later)
 ```
 
-### 1.4 Thêm BossController Script
+### 1.4 Add BossController Script
 ```
 1. Select Boss GameObject
 2. Add Component > BossController
-3. Ho?c kéo script vào GameObject
+3. Or drag script into GameObject
 ```
 
 ---
 
-## ??? B??C 2: SETUP NAVMESH
+## ??? STEP 2: SETUP NAVMESH
 
-### 2.1 Bake NavMesh cho Scene
+### 2.0 Install AI Navigation Package (REQUIRED for Unity 6)
 
 ```
-1. M? NavMesh window:
-   Window > AI > Navigation
-   
-2. Tab "Bake":
+Unity 6 does NOT have built-in NavMesh anymore!
+You MUST install the package first.
+
+1. Open Package Manager:
+   Window > Package Manager
+
+2. Change dropdown (top-left):
+   "Packages: In Project" ? "Unity Registry"
+
+3. Search for: "AI Navigation"
+   (Or full name: "com.unity.ai.navigation")
+
+4. Click "Install" button
+
+5. Wait for Unity to install (may take a few seconds)
+
+6. Verify installation:
+   ? GameObject > AI > NavMesh Surface (new menu appears)
+   ? Component search shows "NavMesh Surface"
+   ? Component search shows "NavMesh Agent"
+```
+
+---
+
+### 2.1 Add NavMesh Surface to Ground
+
+```
+Unity 6 uses NavMesh Surface component instead of Bake window!
+
+1. Select "Environment" GameObject (or Ground/Floor parent)
+
+2. Click "Add Component" at bottom of Inspector
+
+3. Search: "NavMesh Surface"
+
+4. Add the component
+
+5. Configure NavMesh Surface:
+   ???????????????????????????????????
+   ? NavMesh Surface                 ?
+   ???????????????????????????????????
+   ? Agent Type: Humanoid            ?
+   ? Default Area: Walkable          ?
+   ? Generate Links: ? (unchecked)  ?
+   ?                                 ?
+   ? Collect Objects: All            ? ? Important!
+   ? Include Layers: Everything      ?
+   ?                                 ?
+   ? Use Geometry: Render Meshes     ?
+   ?                                 ?
+   ? ???????????????????????????     ?
+   ? ?     ?? Bake             ?     ? ? Click here
+   ? ???????????????????????????     ?
+   ???????????????????????????????????
+
+6. Click "Bake" button
+
+7. Wait for baking to complete (progress bar appears)
+
+8. Check result:
+   ? Blue overlay appears on ground in Scene view
+   ? Walkable areas show in light blue color
+   ? Boss must stand on blue area
+```
+
+**Important Notes:**
+- If "Collect Objects" = `All`: No need to mark objects as Static
+- If "Collect Objects" = `Volume` or `Children`: Must mark objects as Navigation Static
+- **Recommended:** Use `All` for simplicity
+
+---
+
+### 2.2 Configure Agent Type (Optional)
+
+```
+If you want custom agent size:
+
+1. Window > AI > Navigation (legacy window)
+
+2. Click "Agents" tab
+
+3. Select "Humanoid" agent type
+
+4. Adjust settings:
    - Agent Radius: 0.5
-   - Agent Height: 2
-   - Max Slope: 45
+   - Agent Height: 2.0
    - Step Height: 0.4
-   
-3. Click "Bake" ? cu?i window
-   
-4. Ki?m tra:
-   - Vùng có th? ?i s? hi?n màu xanh
-   - Boss ph?i ??ng trên vùng xanh này
-```
+   - Max Slope: 45
 
-### 2.2 ?ánh d?u Ground là Static
-```
-1. Select t?t c? Ground/Floor objects
-2. Tick "Navigation Static" ? Inspector
-3. Bake l?i NavMesh
+5. Go back to NavMesh Surface component
+
+6. Click "Bake" again to apply changes
 ```
 
 ---
 
-## ?? B??C 3: C?U HÌNH BOSSCONTROLLER
+### 2.3 Verify NavMesh Setup
+
+```
+1. Select Boss GameObject in Hierarchy
+
+2. Check Scene view:
+   ? Boss should be standing on blue NavMesh area
+   ? If not, move Boss to stand on blue area
+
+3. Check Environment object:
+   ? Should have "NavMesh Surface" component
+   ? Component should show "NavMesh Data Asset" field filled
+
+4. Test in Play mode:
+   - Boss should be able to move on blue areas
+   - Boss cannot move on areas without blue overlay
+```
+
+---
+
+### 2.4 Troubleshooting NavMesh
+
+**Problem: No blue overlay appears after Bake**
+```
+Solutions:
+1. Check "Collect Objects" is set to "All"
+2. Verify ground has Mesh Renderer component
+3. Try marking ground as "Navigation Static":
+   - Select Ground
+   - Inspector > Static dropdown > Navigation Static
+   - Bake again
+```
+
+**Problem: NavMesh Surface component not found**
+```
+Solution:
+- AI Navigation package not installed
+- Go back to Step 2.0 and install the package
+```
+
+**Problem: Boss falls through ground**
+```
+Solutions:
+1. Ground must have Mesh Collider or Box Collider
+2. Check ground Layer is not in "Ignore Raycast"
+3. Verify Boss has NavMesh Agent component
+```
+
+---
+
+## ?? STEP 3: CONFIGURE BOSSCONTROLLER
 
 ### 3.1 Boss Stats
 ```
 Select Boss > Inspector > BossController:
 
 [Boss Stats]
-?? Max Health: 1000          // Máu boss
-?? Attack Damage: 30         // Sát th??ng m?i ?òn
-?? Move Speed: 3.5           // T?c ?? di chuy?n
+?? Max Health: 1000          // Boss health
+?? Attack Damage: 30         // Damage per hit
+?? Move Speed: 3.5           // Movement speed
 ```
 
 ### 3.2 Combat Settings
 ```
 [Combat Settings]
-?? Detection Range: 15       // Phát hi?n player trong 15m
-?? Attack Range: 2.5         // ?ánh player trong 2.5m
-?? Attack Cooldown: 2        // H?i chiêu 2 giây
-?? Max Chase Distance: 30    // ?u?i t?i ?a 30m
+?? Detection Range: 15       // Detect player within 15m
+?? Attack Range: 2.5         // Attack player within 2.5m
+?? Attack Cooldown: 2        // Cooldown 2 seconds
+?? Max Chase Distance: 30    // Chase up to 30m
 ```
 
 ### 3.3 Attack Hitbox
 ```
 [Attack Hitbox]
-?? Attack Point: (kéo child object vào)
+?? Attack Point: (drag child object here)
 ?? Attack Radius: 1.5
-?? Player Layer: Player      // Ch?n layer c?a Player
+?? Player Layer: Player      // Select Player layer
 ```
 
 ### 3.4 References
 ```
 [References]
-?? Target: (kéo Player GameObject vào)
+?? Target: (drag Player GameObject here)
    
-?? N?u ?? tr?ng, boss s? t? tìm GameObject có tag "Player"
+?? If left empty, boss will auto-find GameObject with tag "Player"
 ```
 
 ### 3.5 Visual Feedback
@@ -140,32 +261,32 @@ Select Boss > Inspector > BossController:
 
 ---
 
-## ?? B??C 4: SETUP ANIMATION (OPTIONAL)
+## ?? STEP 4: SETUP ANIMATION (OPTIONAL)
 
-### 4.1 Thêm Animator Component
+### 4.1 Add Animator Component
 ```
 1. Select Boss GameObject
 2. Add Component > Animator
-3. Assign Animator Controller vào field "Controller"
+3. Assign Animator Controller to "Controller" field
 ```
 
-### 4.2 T?o Animator Parameters
+### 4.2 Create Animator Parameters
 ```
-M? Animator window (Ctrl+6), t?o Parameters:
+Open Animator window (Ctrl+6), create Parameters:
 
 [Parameters Tab]
-?? Speed    (Float)    // T?c ?? di chuy?n
-?? Attack   (Trigger)  // Trigger t?n công
-?? Hit      (Trigger)  // Trigger nh?n ?òn
-?? Death    (Trigger)  // Trigger ch?t
+?? Speed    (Float)    // Movement speed
+?? Attack   (Trigger)  // Attack trigger
+?? Hit      (Trigger)  // Hit trigger
+?? Death    (Trigger)  // Death trigger
 ```
 
-### 4.3 T?o Animation States
+### 4.3 Create Animation States
 ```
-[States c?n có]
+[Required States]
 ?? Idle
 ?? Walk/Run
-?? Attack (1 ho?c nhi?u)
+?? Attack (1 or more)
 ?? Hit/Hurt
 ?? Death
 ```
@@ -202,238 +323,304 @@ Any State ? Death:
 
 ---
 
-## ?? B??C 5: T?O ATTACK POINT
+## ?? STEP 5: CREATE ATTACK POINT
 
-### 5.1 T?o Attack Point GameObject
+### 5.1 Create Attack Point GameObject
 ```
 1. Right click Boss GameObject > Create Empty
-2. ??t tên "AttackPoint"
-3. Position AttackPoint phía tr??c Boss:
-   - Position: (0, 1, 1.5)  // Tùy theo model
+2. Name it "AttackPoint"
+3. Position AttackPoint in front of Boss:
+   - Position: (0, 1, 1.5)  // Depends on model
    
-4. Kéo AttackPoint vào field "Attack Point" c?a BossController
+4. Drag AttackPoint into "Attack Point" field of BossController
 ```
 
-### 5.2 Visualize Attack Range (Optional)
+### 5.2 Visualize Attack Range
+
+**Good news!** BossController already has **built-in Gizmos visualization**. No need to add any component!
+
+#### How to see Attack Range visualization:
+
 ```
-1. Select AttackPoint
-2. Add Component > Draw Gizmo (t? t?o script)
-3. Ho?c dùng Gizmos c?a BossController (ch? hi?n khi select)
+1. Select Boss GameObject in Hierarchy
+
+2. Look at Scene view (NOT Game view)
+
+3. You will see colored circles:
+   ?? Yellow circle   = Detection Range (15m)
+   ?? Red circle      = Attack Range (2.5m)
+   ?? Purple circle   = Attack Hitbox (at AttackPoint position)
+   ?? Blue circle     = Max Chase Distance (30m)
+
+4. These circles are ONLY visible when Boss is selected
 ```
+
+#### To see Gizmos in Scene view:
+
+```
+1. Make sure "Gizmos" button is ON in Scene view toolbar
+   (Button at top-right of Scene view)
+
+2. If circles are too small/big, click Gizmos dropdown:
+   - Adjust "3D Icons" slider
+   - Or enable/disable specific Gizmos
+```
+
+#### Code responsible for visualization:
+
+Already included in BossController.cs:
+```csharp
+void OnDrawGizmosSelected()
+{
+    // Yellow circle: Detection Range
+    Gizmos.color = Color.yellow;
+    Gizmos.DrawWireSphere(transform.position, detectionRange);
+    
+    // Red circle: Attack Range
+    Gizmos.color = Color.red;
+    Gizmos.DrawWireSphere(transform.position, attackRange);
+    
+    // Purple circle: Attack Hitbox
+    if (attackPoint != null)
+    {
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawWireSphere(attackPoint.position, attackRadius);
+    }
+    
+    // Blue circle: Max Chase Distance
+    Gizmos.color = Color.cyan;
+    Gizmos.DrawWireSphere(transform.position, maxChaseDistance);
+}
+```
+
+#### Optional: Always Show Gizmos (even when Boss is not selected)
+
+If you want to see Gizmos even when Boss is NOT selected, change method name:
+
+```csharp
+// In BossController.cs
+// Change from:
+void OnDrawGizmosSelected()
+
+// To:
+void OnDrawGizmos()  // ? Remove "Selected" suffix
+```
+
+?? **Warning:** This will draw Gizmos for ALL bosses in scene, which may clutter the view.
 
 ---
 
-## ??? B??C 6: SETUP LAYER VÀ COLLISION
+## ??? STEP 6: SETUP LAYER AND COLLISION
 
-### 6.1 T?o Layer cho Player
+### 6.1 Create Layer for Player
 ```
 1. Edit > Project Settings > Tags and Layers
-2. Thêm Layer:
+2. Add Layer:
    - Layer 6: Player
    
 3. Select Player GameObject
 4. Set Layer = "Player"
 ```
 
-### 6.2 C?u hình BossController
+### 6.2 Configure BossController
 ```
 1. Select Boss GameObject
 2. Inspector > BossController
-3. Player Layer > Ch?n "Player"
+3. Player Layer > Select "Player"
 ```
 
-### 6.3 C?u hình Player Tag
+### 6.3 Configure Player Tag
 ```
 1. Select Player GameObject
-2. Inspector > Tag > Ch?n "Player"
+2. Inspector > Tag > Select "Player"
    
-?? N?u không có tag "Player":
+?? If "Player" tag doesn't exist:
    - Inspector > Tag > Add Tag...
-   - Thêm tag m?i: "Player"
-   - Quay l?i Player object và set tag
+   - Add new tag: "Player"
+   - Go back to Player object and set tag
 ```
 
 ### 6.4 Layer Collision Matrix (Optional)
 ```
 1. Edit > Project Settings > Physics
 2. Layer Collision Matrix:
-   ? Boss có th? va ch?m v?i Player
-   ? Boss có th? va ch?m v?i Ground
+   ? Boss can collide with Player
+   ? Boss can collide with Ground
 ```
 
 ---
 
-## ?? B??C 7: TEST BOSS
+## ?? STEP 7: TEST BOSS
 
 ### 7.1 Test Detection Range
 ```
 1. Play scene
-2. Di chuy?n Player l?i g?n Boss
-3. Ki?m tra:
-   ? Boss chuy?n sang Chase khi Player trong vùng phát hi?n
-   ? Boss quay m?t v? Player
-   ? Boss di chuy?n theo Player
+2. Move Player close to Boss
+3. Check:
+   ? Boss changes to Chase when Player in detection range
+   ? Boss faces Player
+   ? Boss moves toward Player
 ```
 
 ### 7.2 Test Attack
 ```
-1. Di chuy?n Player vào t?m ?ánh
-2. Ki?m tra:
-   ? Boss d?ng l?i
-   ? Boss trigger animation Attack
-   ? Console log "Boss hit: Player" xu?t hi?n
+1. Move Player into attack range
+2. Check:
+   ? Boss stops
+   ? Boss triggers Attack animation
+   ? Console log "Boss hit: Player" appears
 ```
 
 ### 7.3 Test Damage
 ```
-1. T?o script test ?? g?i boss.TakeDamage(100)
-2. Ki?m tra:
-   ? Boss nh?p nháy màu ??
-   ? Console log hi?n damage nh?n
-   ? Boss chuy?n sang Chase (n?u ?ang Idle)
+1. Create test script to call boss.TakeDamage(100)
+2. Check:
+   ? Boss flashes red color
+   ? Console log shows damage received
+   ? Boss changes to Chase (if was Idle)
 ```
 
 ### 7.4 Test Return to Spawn
 ```
-1. Cho Player ch?y xa Boss (> Max Chase Distance)
-2. Ki?m tra:
-   ? Boss quay v? v? trí spawn
-   ? Boss h?i full máu khi v? spawn
-   ? Boss chuy?n v? Idle
+1. Make Player run far from Boss (> Max Chase Distance)
+2. Check:
+   ? Boss returns to spawn position
+   ? Boss restores full health at spawn
+   ? Boss changes to Idle
 ```
 
 ---
 
 ## ?? TROUBLESHOOTING
 
-### ? Boss không di chuy?n
+### ? Boss not moving
 ```
-Ki?m tra:
-1. ? NavMesh ?ã ???c bake ch?a?
-2. ? Boss ??ng trên vùng NavMesh xanh?
-3. ? NavMeshAgent component enabled?
-4. ? Ground ?ã set Navigation Static?
-5. ? Target (Player) ?ã ???c assign?
-```
-
-### ? Boss không t?n công
-```
-Ki?m tra:
-1. ? Player trong Attack Range?
-2. ? Player Layer ?úng?
-3. ? Attack Point ?ã ???c assign?
-4. ? Attack Cooldown ?ã h?t?
-5. ? Animator có parameter "Attack"?
+Check:
+1. ? Is NavMesh baked?
+2. ? Is Boss standing on blue NavMesh area?
+3. ? Is NavMeshAgent component enabled?
+4. ? Is Ground set to Navigation Static?
+5. ? Is Target (Player) assigned?
 ```
 
-### ? Boss không nh?n damage
+### ? Boss not attacking
 ```
-Ki?m tra:
-1. ? ?ã g?i boss.TakeDamage(amount)?
-2. ? Boss ch?a ch?t (isDead = false)?
-3. ? Renderer có material v?i _Color property?
-```
-
-### ? Animation không ch?y
-```
-Ki?m tra:
-1. ? Animator Controller ?ã assign?
-2. ? Parameters tên ?úng (Speed, Attack, Hit, Death)?
-3. ? Transitions ?ã setup ?úng?
-4. ? Animation clips ?ã assign vào states?
+Check:
+1. ? Is Player in Attack Range?
+2. ? Is Player Layer correct?
+3. ? Is Attack Point assigned?
+4. ? Has Attack Cooldown finished?
+5. ? Does Animator have "Attack" parameter?
 ```
 
-### ? Boss quay v? spawn liên t?c
+### ? Boss not taking damage
 ```
-Ki?m tra:
-1. ? Max Chase Distance > Detection Range
-2. ? Spawn position c?a Boss h?p lý
-3. ? NavMesh ?? l?n cho Boss di chuy?n
+Check:
+1. ? Did you call boss.TakeDamage(amount)?
+2. ? Is Boss not dead (isDead = false)?
+3. ? Does Renderer have material with _Color property?
+```
+
+### ? Animation not playing
+```
+Check:
+1. ? Is Animator Controller assigned?
+2. ? Are Parameters named correctly (Speed, Attack, Hit, Death)?
+3. ? Are Transitions setup correctly?
+4. ? Are Animation clips assigned to states?
+```
+
+### ? Boss keeps returning to spawn
+```
+Check:
+1. ? Is Max Chase Distance > Detection Range?
+2. ? Is Boss spawn position reasonable?
+3. ? Is NavMesh large enough for Boss movement?
 ```
 
 ---
 
 ## ?? GIZMOS VISUALIZATION
 
-Khi select Boss trong Scene view, b?n s? th?y:
+When Boss is selected in Scene view, you will see:
 
 ```
-?? Vòng tròn vàng   = Detection Range (phát hi?n player)
-?? Vòng tròn ??     = Attack Range (t?n công player)
-?? Vòng tròn tím    = Attack Hitbox (vùng damage)
-?? Vòng tròn xanh   = Max Chase Distance (?u?i t?i ?a)
+?? Yellow circle   = Detection Range (detect player)
+?? Red circle      = Attack Range (attack player)
+?? Purple circle   = Attack Hitbox (damage area)
+?? Blue circle     = Max Chase Distance (max chase)
 ```
 
 ---
 
-## ?? CHECKLIST HOÀN CH?NH
+## ?? COMPLETE CHECKLIST
 
 ### Boss GameObject
-- [ ] BossController script ?ã thêm
-- [ ] NavMeshAgent component ?ã thêm
-- [ ] Collider ?ã thêm và ?i?u ch?nh size
-- [ ] Animator ?ã thêm (optional)
+- [ ] BossController script added
+- [ ] NavMeshAgent component added
+- [ ] Collider added and size adjusted
+- [ ] Animator added (optional)
 
 ### NavMesh Setup
-- [ ] Ground objects ?ã set Navigation Static
-- [ ] NavMesh ?ã ???c bake
-- [ ] Boss ??ng trên vùng NavMesh xanh
+- [ ] Ground objects set to Navigation Static
+- [ ] NavMesh baked
+- [ ] Boss standing on blue NavMesh area
 
 ### BossController Configuration
-- [ ] Max Health, Attack Damage, Move Speed ?ã set
-- [ ] Detection Range, Attack Range ?ã set
-- [ ] Attack Point ?ã t?o và assign
-- [ ] Player Layer ?ã ch?n ?úng
-- [ ] Target (Player) ?ã assign ho?c Player có tag "Player"
+- [ ] Max Health, Attack Damage, Move Speed set
+- [ ] Detection Range, Attack Range set
+- [ ] Attack Point created and assigned
+- [ ] Player Layer selected correctly
+- [ ] Target (Player) assigned or Player has tag "Player"
 
 ### Animation Setup (Optional)
-- [ ] Animator Controller ?ã assign
-- [ ] Parameters ?ã t?o (Speed, Attack, Hit, Death)
-- [ ] Animation States ?ã t?o
-- [ ] Transitions ?ã setup
+- [ ] Animator Controller assigned
+- [ ] Parameters created (Speed, Attack, Hit, Death)
+- [ ] Animation States created
+- [ ] Transitions setup
 
 ### Player Setup
-- [ ] Player có Tag "Player"
-- [ ] Player có Layer "Player"
-- [ ] Player có Collider
+- [ ] Player has Tag "Player"
+- [ ] Player has Layer "Player"
+- [ ] Player has Collider
 
 ### Testing
-- [ ] Boss phát hi?n và ?u?i Player
-- [ ] Boss t?n công khi Player trong t?m
-- [ ] Boss nh?n damage và flash màu ??
-- [ ] Boss quay v? spawn khi Player ch?y xa
-- [ ] Boss ch?t khi h?t máu
+- [ ] Boss detects and chases Player
+- [ ] Boss attacks when Player in range
+- [ ] Boss takes damage and flashes red
+- [ ] Boss returns to spawn when Player runs away
+- [ ] Boss dies when health reaches zero
 
 ---
 
 ## ?? TIPS & TRICKS
 
-### 1. T?i ?u hi?u su?t
+### 1. Optimize Performance
 ```csharp
-// N?u có nhi?u boss, t?ng update interval c?a NavMeshAgent
-navMeshAgent.updateInterval = 0.2f; // Update 5 l?n/giây thay vì m?i frame
+// If you have many bosses, increase NavMeshAgent update interval
+navMeshAgent.updateInterval = 0.2f; // Update 5 times/second instead of every frame
 ```
 
-### 2. Thêm debug visualization
+### 2. Add Debug Visualization
 ```csharp
-// Thêm vào Update() ?? debug
+// Add to Update() for debugging
 void Update()
 {
     Debug.DrawLine(transform.position, target.position, Color.red);
 }
 ```
 
-### 3. T?o Boss Variants
+### 3. Create Boss Variants
 ```
-1. T?o Prefab t? Boss ?ã setup
-2. T?o variants v?i stats khác:
+1. Create Prefab from setup Boss
+2. Create variants with different stats:
    - MiniBoss: Health 500, Speed 5
    - MegaBoss: Health 2000, Speed 2
 ```
 
-### 4. K?t h?p v?i Player Attack
+### 4. Integrate with Player Attack
 ```csharp
-// Trong Player Attack script, g?i:
+// In Player Attack script, call:
 BossController boss = hit.GetComponent<BossController>();
 if (boss != null)
 {
@@ -443,12 +630,12 @@ if (boss != null)
 
 ---
 
-## ?? H? TR?
+## ?? SUPPORT
 
-N?u g?p v?n ??, ki?m tra:
-1. Console logs ?? xem l?i
-2. Inspector ?? xem references ?ã ?? ch?a
-3. Scene view Gizmos ?? xem ranges
-4. Animator window ?? ki?m tra transitions
+If you encounter issues, check:
+1. Console logs to see errors
+2. Inspector to verify all references are assigned
+3. Scene view Gizmos to see ranges
+4. Animator window to check transitions
 
-**Chúc b?n t?o Boss thành công! ??**
+**Good luck creating your Boss! ??**

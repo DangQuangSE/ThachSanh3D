@@ -1,17 +1,17 @@
-# ? QUICK BOSS SETUP - 5 PHÚT
+# ? QUICK BOSS SETUP - 5 MINUTES
 
-## ?? SETUP NHANH (Không c?n Animation)
+## ?? QUICK SETUP (No Animation Required)
 
-### 1?? T?O BOSS (30 giây)
+### 1?? CREATE BOSS (30 seconds)
 ```
-1. Kéo model Boss vào Scene
+1. Drag Boss model into Scene
 2. Add Component:
    - BossController ?
    - Nav Mesh Agent ?
    - Capsule Collider ?
 ```
 
-### 2?? BAKE NAVMESH (1 phút)
+### 2?? BAKE NAVMESH (1 minute)
 ```
 1. Window > AI > Navigation
 2. Select Ground objects
@@ -19,7 +19,7 @@
 4. Tab "Bake" > Click "Bake"
 ```
 
-### 3?? C?U HÌNH BOSS (2 phút)
+### 3?? CONFIGURE BOSS (2 minutes)
 ```
 Select Boss > Inspector:
 
@@ -36,70 +36,70 @@ Combat Settings:
 
 Attack Hitbox:
 ?? Attack Radius: 1.5
-?? Player Layer: [Ch?n "Player"]
+?? Player Layer: [Select "Player"]
 
 References:
-?? Target: [?? tr?ng - auto tìm]
+?? Target: [Leave empty - auto find]
 ```
 
-### 4?? SETUP PLAYER (1 phút)
+### 4?? SETUP PLAYER (1 minute)
 ```
 1. Select Player GameObject
 2. Inspector > Tag: "Player"
 3. Inspector > Layer: "Player"
 ```
 
-### 5?? T?O ATTACK POINT (30 giây)
+### 5?? CREATE ATTACK POINT (30 seconds)
 ```
 1. Right click Boss > Create Empty
-2. Tên: "AttackPoint"
+2. Name: "AttackPoint"
 3. Position: (0, 1, 1.5)
-4. Kéo vào Boss > Attack Point field
+4. Drag into Boss > Attack Point field
 ```
 
 ---
 
-## ? XONG! TEST NGAY
+## ? DONE! TEST NOW
 
-### Ch?y Game và Test:
-1. **Player ??ng xa** ? Boss Idle ?
-2. **Player l?i g?n** ? Boss ?u?i theo ?
-3. **Player trong t?m** ? Boss t?n công ?
-4. **Player ch?y xa** ? Boss v? spawn ?
+### Run Game and Test:
+1. **Player far away** ? Boss Idle ?
+2. **Player approaches** ? Boss chases ?
+3. **Player in range** ? Boss attacks ?
+4. **Player runs away** ? Boss returns to spawn ?
 
 ---
 
-## ?? THÊM ANIMATION (OPTIONAL)
+## ?? ADD ANIMATION (OPTIONAL)
 
-### Setup Animation trong 2 phút:
+### Setup Animation in 2 minutes:
 ```
 1. Add Component > Animator
 2. Assign Animator Controller
-3. T?o Parameters:
+3. Create Parameters:
    - Speed (Float)
    - Attack (Trigger)
    - Hit (Trigger)
    - Death (Trigger)
 4. Setup States: Idle, Walk, Attack, Hit, Death
-5. T?o Transitions v?i Exit Time
+5. Create Transitions with Exit Time
 ```
 
 ---
 
-## ?? L?I TH??NG G?P
+## ?? COMMON ERRORS
 
-| L?i | Fix |
-|-----|-----|
-| Boss không di chuy?n | Bake NavMesh, ki?m tra Boss trên vùng xanh |
-| Boss không t?n công | Ki?m tra Player Layer, Attack Point |
-| Boss không nh?n damage | G?i `boss.TakeDamage(amount)` |
-| Animation không ch?y | Ki?m tra Parameters tên ?úng |
+| Error | Fix |
+|-------|-----|
+| Boss not moving | Bake NavMesh, check Boss on blue area |
+| Boss not attacking | Check Player Layer, Attack Point |
+| Boss not taking damage | Call `boss.TakeDamage(amount)` |
+| Animation not playing | Check Parameters names are correct |
 
 ---
 
-## ?? SETTINGS KHUY?N NGH?
+## ?? RECOMMENDED SETTINGS
 
-### Boss Th??ng:
+### Normal Boss:
 ```
 Health: 500-1000
 Damage: 20-30
@@ -128,11 +128,11 @@ Attack Range: 3-5
 
 ---
 
-## ?? CODE M?U ?? TEST
+## ?? SAMPLE CODE FOR TESTING
 
-### Test Boss nh?n damage t? Player:
+### Test Boss taking damage from Player:
 ```csharp
-// Thêm vào Player Attack script
+// Add to Player Attack script
 void OnAttackHit()
 {
     Collider[] hits = Physics.OverlapSphere(attackPoint.position, attackRadius);
@@ -141,28 +141,28 @@ void OnAttackHit()
         BossController boss = hit.GetComponent<BossController>();
         if (boss != null)
         {
-            boss.TakeDamage(30); // Gây 30 damage
+            boss.TakeDamage(30); // Deal 30 damage
         }
     }
 }
 ```
 
-### Test Boss b?ng button:
+### Test Boss with button:
 ```csharp
-// T?o script TestBoss.cs
+// Create script TestBoss.cs
 public class TestBoss : MonoBehaviour
 {
     public BossController boss;
     
     void Update()
     {
-        // Press K ?? gây 100 damage
+        // Press K to deal 100 damage
         if (Input.GetKeyDown(KeyCode.K))
         {
             boss.TakeDamage(100);
         }
         
-        // Press L ?? kill boss
+        // Press L to kill boss
         if (Input.GetKeyDown(KeyCode.L))
         {
             boss.TakeDamage(9999);
@@ -173,14 +173,14 @@ public class TestBoss : MonoBehaviour
 
 ---
 
-## ?? CHECKLIST 1 PHÚT
+## ?? 1-MINUTE CHECKLIST
 
-- [ ] Boss có BossController + NavMeshAgent + Collider
-- [ ] NavMesh ?ã bake
-- [ ] Boss Stats ?ã ?i?n
-- [ ] Player có Tag "Player"
-- [ ] Player Layer ?ã ch?n trong BossController
-- [ ] AttackPoint ?ã t?o và assign
-- [ ] Test: Boss ?u?i theo Player ?
+- [ ] Boss has BossController + NavMeshAgent + Collider
+- [ ] NavMesh is baked
+- [ ] Boss Stats are filled
+- [ ] Player has Tag "Player"
+- [ ] Player Layer selected in BossController
+- [ ] AttackPoint created and assigned
+- [ ] Test: Boss chases Player ?
 
-**DONE! Boss s?n sàng chi?n ??u! ????**
+**DONE! Boss is ready for battle! ????**

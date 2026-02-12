@@ -236,6 +236,14 @@ public class BossController : MonoBehaviour
         foreach (Collider hitCollider in hitColliders)
         {
             Debug.Log("Boss hit: " + hitCollider.name);
+            
+            // Try to damage player
+            PlayerHealth playerHealth = hitCollider.GetComponent<PlayerHealth>();
+            if (playerHealth != null && !playerHealth.IsDead())
+            {
+                playerHealth.TakeDamage(attackDamage);
+                Debug.Log($"Boss dealt {attackDamage} damage to {hitCollider.name}!");
+            }
         }
     }
 

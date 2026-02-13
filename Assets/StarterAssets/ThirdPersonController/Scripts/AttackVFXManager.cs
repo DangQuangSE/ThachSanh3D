@@ -38,6 +38,13 @@ namespace StarterAssets
         [Tooltip("Time to destroy VFX after spawning")]
         public float vfxLifetime = 2f;
 
+        [Header("VFX Playback Settings")]
+        [Tooltip("Auto-play particle systems on spawn (enable if VFX doesn't show)")]
+        public bool autoPlayParticleSystems = true;
+        
+        [Tooltip("Stop particle systems before destroying")]
+        public bool stopBeforeDestroy = true;
+
         [Header("Timing Settings")]
         [Tooltip("Normalized time (0-1) in Attack 1 animation when VFX spawns")]
         [Range(0f, 1f)]
@@ -58,6 +65,9 @@ namespace StarterAssets
         [Header("Debug")]
         [Tooltip("Show debug logs")]
         public bool showDebugLogs = false;
+        
+        [Tooltip("Show detailed VFX spawn info")]
+        public bool showDetailedDebug = false;
 
         // Private variables
         private Animator _animator;
@@ -79,6 +89,15 @@ namespace StarterAssets
             {
                 Debug.LogWarning("AttackVFXManager: VFX Spawn Point not set! Using player position as fallback.");
                 vfxSpawnPoint = transform;
+            }
+
+            // Validate VFX prefabs at start
+            if (showDetailedDebug)
+            {
+                ValidateVFXPrefab(attack1VFX, "Attack 1");
+                ValidateVFXPrefab(attack2VFX, "Attack 2");
+                ValidateVFXPrefab(attack3VFX, "Attack 3");
+                ValidateVFXPrefab(ultimateVFX, "Ultimate");
             }
         }
 
@@ -185,12 +204,108 @@ namespace StarterAssets
             // Apply scale
             vfxInstance.transform.localScale = Vector3.one * vfxScale;
 
+            // IMPORTANT: Play all particle systems manually
+            if (autoPlayParticleSystems)
+            {
+                PlayAllParticleSystems(vfxInstance);
+            }
+
             // Destroy after lifetime
             Destroy(vfxInstance, vfxLifetime);
 
             if (showDebugLogs)
             {
                 Debug.Log($"AttackVFXManager: Spawned VFX for {attackName} at {spawnPosition}");
+            }
+
+            if (showDetailedDebug)
+            {
+                DebugVFXInstance(vfxInstance, attackName);
+            }
+        }
+
+        /// <summary>
+        /// Play all particle systems in the VFX GameObject
+        /// This fixes the issue where VFX doesn't show when spawned at runtime
+        /// </summary>
+        private void PlayAllParticleSystems(GameObject vfxObject)
+        {
+            // Get all particle systems in this object and its children
+            ParticleSystem[] particleSystems = vfxObject.GetComponentsInChildren<ParticleSystem>();
+            
+            if (particleSystems.Length == 0)
+            {
+                if (showDetailedDebug)
+                    Debug.LogWarning($"AttackVFXManager: No ParticleSystem found in {vfxObject.name}. VFX might not show!");
+                return;
+            }
+
+            // Play each particle system
+            foreach (ParticleSystem ps in particleSystems)
+            {
+                if (ps != null)
+                {
+                    // Stop first to reset, then play
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    ps.Play(true);
+
+                    if (showDetailedDebug)
+                    {
+                        Debug.Log($"AttackVFXManager: Playing ParticleSystem '{ps.name}' (IsPlaying: {ps.isPlaying}, IsEmitting: {ps.isEmitting})");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Validate VFX prefab structure
+        /// </summary>
+        private void ValidateVFXPrefab(GameObject prefab, string attackName)
+        {
+            if (prefab == null)
+            {
+                Debug.LogWarning($"AttackVFXManager: {attackName} VFX prefab is NULL!");
+                return;
+            }
+
+            // Check for Particle Systems
+            ParticleSystem[] particleSystems = prefab.GetComponentsInChildren<ParticleSystem>();
+            
+            if (particleSystems.Length == 0)
+            {
+                Debug.LogWarning($"AttackVFXManager: {attackName} VFX '{prefab.name}' has NO ParticleSystem components!");
+            }
+            else
+            {
+                Debug.Log($"AttackVFXManager: {attackName} VFX '{prefab.name}' has {particleSystems.Length} ParticleSystem(s)");
+                
+                // Check each particle system settings
+                foreach (ParticleSystem ps in particleSystems)
+                {
+                    var main = ps.main;
+                    Debug.Log($"  - {ps.name}: PlayOnAwake={main.playOnAwake}, Loop={main.loop}, Duration={main.duration}s");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Debug VFX instance after spawn
+        /// </summary>
+        private void DebugVFXInstance(GameObject instance, string attackName)
+        {
+            Debug.Log($"=== VFX DEBUG: {attackName} ===");
+            Debug.Log($"Instance Name: {instance.name}");
+            Debug.Log($"Position: {instance.transform.position}");
+            Debug.Log($"Rotation: {instance.transform.rotation.eulerAngles}");
+            Debug.Log($"Scale: {instance.transform.localScale}");
+            Debug.Log($"Active: {instance.activeSelf}");
+
+            ParticleSystem[] particleSystems = instance.GetComponentsInChildren<ParticleSystem>();
+            Debug.Log($"Particle Systems found: {particleSystems.Length}");
+            
+            foreach (ParticleSystem ps in particleSystems)
+            {
+                Debug.Log($"  - {ps.name}: IsPlaying={ps.isPlaying}, IsEmitting={ps.isEmitting}, ParticleCount={ps.particleCount}");
             }
         }
 

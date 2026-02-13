@@ -14,6 +14,7 @@ namespace StarterAssets
 		public bool sprint;
 		public bool attack;
 		public bool ultimate;
+		public bool protect;
 
 		[Header("Movement Settings")]
 		public bool analogMovement;
@@ -55,6 +56,11 @@ namespace StarterAssets
 		{
 			UltimateInput(value.isPressed);
 		}
+
+		public void OnProtect(InputValue value)
+		{
+			ProtectInput(value.isPressed);
+		}
 #endif
 
 
@@ -86,6 +92,11 @@ namespace StarterAssets
 		public void UltimateInput(bool newUltimateState)
 		{
 			ultimate = newUltimateState;
+		}
+
+		public void ProtectInput(bool newProtectState)
+		{
+			protect = newProtectState;
 		}
 
 		private void OnApplicationFocus(bool hasFocus)

@@ -117,6 +117,9 @@ namespace StarterAssets
         private bool _isUltimateReady = true;
         private bool _isPerformingUltimate = false;
 
+        // protect
+        private bool _isProtecting = false;
+
         // animation IDs
         private int _animIDSpeed;
         private int _animIDGrounded;
@@ -127,6 +130,7 @@ namespace StarterAssets
         private int _animIDAttack2;
         private int _animIDAttack3;
         private int _animIDUltimate;
+        private int _animIDProtect;
 
 #if ENABLE_INPUT_SYSTEM 
         private PlayerInput _playerInput;
@@ -191,6 +195,7 @@ namespace StarterAssets
             Move();
             HandleAttack();
             HandleUltimate();
+            HandleProtect();
             
             // Manual root motion handling when "Apply Root Motion = Handled by Script"
             if (_hasAnimator && !_animator.applyRootMotion)
@@ -215,6 +220,7 @@ namespace StarterAssets
             _animIDAttack2 = Animator.StringToHash("Attack2");
             _animIDAttack3 = Animator.StringToHash("Attack3");
             _animIDUltimate = Animator.StringToHash("Ultimate");
+            _animIDProtect = Animator.StringToHash("Protect");
         }
 
         private void GroundedCheck()
@@ -258,6 +264,7 @@ namespace StarterAssets
             // Block movement during attack animations or ultimate
             bool isInAttackState = false;
             bool isInUltimateState = false;
+            bool isInProtectState = false;
             if (_hasAnimator)
             {
                 AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
@@ -265,10 +272,11 @@ namespace StarterAssets
                                  currentState.IsName("Attack_2") || 
                                  currentState.IsName("Attack_3");
                 isInUltimateState = currentState.IsName("UntimateAttack_1");
+                isInProtectState = currentState.IsName("ProtectAxe");
             }
             
-            // Don't allow HORIZONTAL movement during attack or ultimate, but ALLOW vertical (gravity)
-            if (isInAttackState || isInUltimateState)
+            // Don't allow HORIZONTAL movement during attack, ultimate or protect, but ALLOW vertical (gravity)
+            if (isInAttackState || isInUltimateState || isInProtectState)
             {
                 // Apply ONLY vertical movement (gravity)
                 Vector3 verticalMove = new Vector3(0.0f, _verticalVelocity, 0.0f);
@@ -281,7 +289,7 @@ namespace StarterAssets
                     _animator.SetFloat(_animIDMotionSpeed, 0f);
                 }
                 
-                return; // Exit early - no horizontal movement during attack/ultimate
+                return; // Exit early - no horizontal movement during attack/ultimate/protect
             }
             
             // set target speed based on move speed, sprint speed and if sprint is pressed
@@ -574,6 +582,67 @@ namespace StarterAssets
                     _isPerformingUltimate = true;
 
                     Debug.Log("Ultimate skill activated!");
+                }
+            }
+        }
+
+        private void HandleProtect()
+        {
+            // Check if currently performing protect
+            bool isInProtectState = false;
+            if (_hasAnimator)
+            {
+                AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+                isInProtectState = currentState.IsName("ProtectAxe");
+                
+                if (isInProtectState)
+                {
+                    _isProtecting = true;
+                }
+                else if (_isProtecting)
+                {
+                    _isProtecting = false;
+                }
+            }
+
+            // Handle protect input
+            if (_input.protect)
+            {
+                _input.protect = false;
+
+                if (!Grounded)
+                {
+                    Debug.Log("Cannot use protect in air!");
+                    return;
+                }
+
+                if (_isProtecting || isInProtectState)
+                {
+                    Debug.Log("Already protecting!");
+                    return;
+                }
+
+                // Start protect
+                if (_hasAnimator)
+                {
+                    // Reset attack combo
+                    _attackCount = 0;
+                    _attackQueued = false;
+                    _lastProcessedAttackCount = 0;
+
+                    // Clear all triggers
+                    _animator.ResetTrigger(_animIDAttack1);
+                    _animator.ResetTrigger(_animIDAttack2);
+                    _animator.ResetTrigger(_animIDAttack3);
+                    _animator.ResetTrigger(_animIDUltimate);
+                    _animator.ResetTrigger(_animIDProtect);
+                    
+                    // Trigger protect animation
+                    _animator.SetTrigger(_animIDProtect);
+                    
+                    _isProtecting = true;
+
+                    Debug.Log("Protect activated!");
                 }
             }
         }

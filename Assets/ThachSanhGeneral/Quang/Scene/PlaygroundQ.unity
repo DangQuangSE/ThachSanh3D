@@ -1126,9 +1126,9 @@ MonoBehaviour:
   spawnOffset: {x: 0, y: 0, z: 0}
   vfxScale: 1
   vfxLifetime: 2
-  attack1RotationOffset: {x: 0, y: -90, z: 0}
+  attack1RotationOffset: {x: 0, y: 0, z: 0}
   attack2RotationOffset: {x: 0, y: 0, z: 0}
-  attack3RotationOffset: {x: 0, y: 0, z: 0}
+  attack3RotationOffset: {x: 0, y: 90, z: 45}
   ultimateRotationOffset: {x: 0, y: 0, z: 0}
   autoPlayParticleSystems: 1
   useWeaponRotation: 1

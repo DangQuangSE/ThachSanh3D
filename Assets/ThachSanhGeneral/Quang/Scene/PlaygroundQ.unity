@@ -1121,7 +1121,7 @@ MonoBehaviour:
   attack1VFX: {fileID: 9177886612219991525, guid: f90fc7acf1ef2fa4c85896a9afc17028, type: 3}
   attack2VFX: {fileID: 5313456068782518071, guid: 50f1354827c77ef4b99c4dca0ee3411d, type: 3}
   attack3VFX: {fileID: 2060418090655630911, guid: 4fb7673fa1cb7e34ea16f350b1e1fba9, type: 3}
-  ultimateVFX: {fileID: 1116249604692860204, guid: 8a02c4042c68dd244abad8cf394dab42, type: 3}
+  ultimateVFX: {fileID: 1205478487176026167, guid: 8436419d5cd706242bb810378b8a8835, type: 3}
   vfxSpawnPoint: {fileID: 293655351}
   spawnOffset: {x: 0, y: 0, z: 0}
   vfxScale: 1

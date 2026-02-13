@@ -26,6 +26,10 @@ namespace StarterAssets
         [Tooltip("VFX prefab for Protect (shield effect - stays active during animation)")]
         public GameObject protectVFX;
 
+        [Header("VFX Prefabs - E Skill Effects")]
+        [Tooltip("VFX prefab for E Skill (Attack360 - 360 degree slash)")]
+        public GameObject eskillVFX;
+
         [Header("VFX Spawn Settings")]
         [Tooltip("Transform where VFX will spawn (usually weapon tip or hand)")]
         public Transform vfxSpawnPoint;
@@ -68,6 +72,9 @@ namespace StarterAssets
         [Tooltip("Rotation offset for Protect")]
         public Vector3 protectRotationOffset = Vector3.zero;
 
+        [Tooltip("Rotation offset for E Skill")]
+        public Vector3 eskillRotationOffset = Vector3.zero;
+
         [Header("VFX Playback Settings")]
         [Tooltip("Auto-play particle systems on spawn (enable if VFX doesn't show)")]
         public bool autoPlayParticleSystems = true;
@@ -96,6 +103,10 @@ namespace StarterAssets
         [Range(0f, 1f)]
         public float protectSpawnTime = 0.1f;
 
+        [Tooltip("Normalized time (0-1) in E Skill animation when VFX spawns")]
+        [Range(0f, 1f)]
+        public float eskillSpawnTime = 0.3f;
+
         [Header("Debug")]
         [Tooltip("Show debug logs")]
         public bool showDebugLogs = false;
@@ -113,6 +124,7 @@ namespace StarterAssets
         private bool _attack3VFXSpawned = false;
         private bool _ultimateVFXSpawned = false;
         private bool _protectVFXSpawned = false;
+        private bool _eskillVFXSpawned = false;
         private GameObject _activeProtectVFX = null;
 
         private void Start()
@@ -146,6 +158,7 @@ namespace StarterAssets
                 ValidateVFXPrefab(attack3VFX, "Attack 3");
                 ValidateVFXPrefab(ultimateVFX, "Ultimate");
                 ValidateVFXPrefab(protectVFX, "Protect");
+                ValidateVFXPrefab(eskillVFX, "E Skill");
             }
         }
 
@@ -256,6 +269,24 @@ namespace StarterAssets
                     DestroyProtectVFX();
                 }
                 _protectVFXSpawned = false;
+            }
+
+            // Check E Skill (Attack360)
+            if (currentState.IsName("Attack360"))
+            {
+                if (normalizedTime >= eskillSpawnTime && !_eskillVFXSpawned)
+                {
+                    SpawnVFX(eskillVFX, eskillRotationOffset, "E Skill (Attack360)");
+                    _eskillVFXSpawned = true;
+                }
+                else if (normalizedTime < eskillSpawnTime)
+                {
+                    _eskillVFXSpawned = false;
+                }
+            }
+            else
+            {
+                _eskillVFXSpawned = false;
             }
         }
 
@@ -525,6 +556,11 @@ namespace StarterAssets
             DestroyProtectVFX();
         }
 
+        public void SpawnESkillVFX()
+        {
+            SpawnVFX(eskillVFX, eskillRotationOffset, "E Skill (Manual)");
+        }
+
         // Visual debug in Scene view
         private void OnDrawGizmosSelected()
         {
@@ -591,6 +627,14 @@ namespace StarterAssets
                     Quaternion rotProtect = Quaternion.Euler(protectRotationOffset);
                     Gizmos.DrawRay(protectPos, rotProtect * Vector3.forward * 0.3f);
                     Gizmos.DrawRay(protectPos, rotProtect * Vector3.up * 0.3f);
+                }
+
+                // Draw E Skill rotation
+                if (eskillVFX != null)
+                {
+                    Gizmos.color = new Color(1f, 0.5f, 0f); // Orange color
+                    Quaternion rotESkill = vfxSpawnPoint.rotation * Quaternion.Euler(eskillRotationOffset);
+                    Gizmos.DrawRay(spawnPosition, rotESkill * Vector3.forward * 0.4f);
                 }
             }
         }

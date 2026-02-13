@@ -1057,6 +1057,10 @@ PrefabInstance:
       value: -20
       objectReference: {fileID: 0}
     - target: {fileID: 4416926081852918490, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
+      propertyPath: ESkillCooldown
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4416926081852918490, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
       propertyPath: UltimateEnabled
       value: 1
       objectReference: {fileID: 0}
@@ -1223,6 +1227,7 @@ MonoBehaviour:
   attack3VFX: {fileID: 2060418090655630911, guid: 4fb7673fa1cb7e34ea16f350b1e1fba9, type: 3}
   ultimateVFX: {fileID: 1205478487176026167, guid: 8436419d5cd706242bb810378b8a8835, type: 3}
   protectVFX: {fileID: 1289543790355709915, guid: b99922c2f59b1a542bdd06ae8bee47ae, type: 3}
+  eskillVFX: {fileID: 856368647163548680, guid: 724d151229932ba47931fcc83c083470, type: 3}
   vfxSpawnPoint: {fileID: 293655351}
   spawnOffset: {x: 0, y: 0, z: 0}
   vfxScale: 1
@@ -1236,6 +1241,7 @@ MonoBehaviour:
   attack3RotationOffset: {x: 0, y: 90, z: 45}
   ultimateRotationOffset: {x: 0, y: 0, z: 0}
   protectRotationOffset: {x: 0, y: 0, z: 0}
+  eskillRotationOffset: {x: 0, y: 0, z: 0}
   autoPlayParticleSystems: 1
   useWeaponRotation: 1
   attack1SpawnTime: 0.4
@@ -1243,6 +1249,7 @@ MonoBehaviour:
   attack3SpawnTime: 0.4
   ultimateSpawnTime: 0.5
   protectSpawnTime: 0
+  eskillSpawnTime: 0.4
   showDebugLogs: 0
   showDetailedDebug: 0
   showRotationGizmos: 0

@@ -15,6 +15,7 @@ namespace StarterAssets
 		public bool attack;
 		public bool ultimate;
 		public bool protect;
+		public bool eskill;
 
 		[Header("Movement Settings")]
 		public bool analogMovement;
@@ -61,6 +62,11 @@ namespace StarterAssets
 		{
 			ProtectInput(value.isPressed);
 		}
+
+		public void OnESkill(InputValue value)
+		{
+			ESkillInput(value.isPressed);
+		}
 #endif
 
 
@@ -97,6 +103,11 @@ namespace StarterAssets
 		public void ProtectInput(bool newProtectState)
 		{
 			protect = newProtectState;
+		}
+
+		public void ESkillInput(bool newESkillState)
+		{
+			eskill = newESkillState;
 		}
 
 		private void OnApplicationFocus(bool hasFocus)

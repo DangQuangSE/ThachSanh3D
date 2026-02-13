@@ -22,6 +22,10 @@ namespace StarterAssets
         [Tooltip("VFX prefab for Ultimate Attack")]
         public GameObject ultimateVFX;
 
+        [Header("VFX Prefabs - Shield/Protect Effects")]
+        [Tooltip("VFX prefab for Protect (shield effect - stays active during animation)")]
+        public GameObject protectVFX;
+
         [Header("VFX Spawn Settings")]
         [Tooltip("Transform where VFX will spawn (usually weapon tip or hand)")]
         public Transform vfxSpawnPoint;
@@ -32,8 +36,21 @@ namespace StarterAssets
         [Tooltip("VFX scale multiplier")]
         public float vfxScale = 1f;
         
-        [Tooltip("Time to destroy VFX after spawning")]
+        [Tooltip("Time to destroy VFX after spawning (for slash effects)")]
         public float vfxLifetime = 2f;
+
+        [Header("Protect VFX Settings")]
+        [Tooltip("Spawn point for Protect VFX (usually player center or ground)")]
+        public Transform protectSpawnPoint;
+
+        [Tooltip("Offset for Protect VFX from spawn point")]
+        public Vector3 protectSpawnOffset = Vector3.zero;
+
+        [Tooltip("Scale for Protect VFX")]
+        public float protectVFXScale = 1f;
+
+        [Tooltip("Follow player during Protect animation")]
+        public bool protectFollowPlayer = true;
 
         [Header("VFX Rotation Per Attack")]
         [Tooltip("Rotation offset for Attack 1 (X=pitch, Y=yaw, Z=roll)")]
@@ -47,6 +64,9 @@ namespace StarterAssets
         
         [Tooltip("Rotation offset for Ultimate")]
         public Vector3 ultimateRotationOffset = Vector3.zero;
+
+        [Tooltip("Rotation offset for Protect")]
+        public Vector3 protectRotationOffset = Vector3.zero;
 
         [Header("VFX Playback Settings")]
         [Tooltip("Auto-play particle systems on spawn (enable if VFX doesn't show)")]
@@ -72,6 +92,10 @@ namespace StarterAssets
         [Range(0f, 1f)]
         public float ultimateSpawnTime = 0.5f;
 
+        [Tooltip("Normalized time (0-1) in Protect animation when VFX spawns")]
+        [Range(0f, 1f)]
+        public float protectSpawnTime = 0.1f;
+
         [Header("Debug")]
         [Tooltip("Show debug logs")]
         public bool showDebugLogs = false;
@@ -88,6 +112,8 @@ namespace StarterAssets
         private bool _attack2VFXSpawned = false;
         private bool _attack3VFXSpawned = false;
         private bool _ultimateVFXSpawned = false;
+        private bool _protectVFXSpawned = false;
+        private GameObject _activeProtectVFX = null;
 
         private void Start()
         {
@@ -104,6 +130,14 @@ namespace StarterAssets
                 vfxSpawnPoint = transform;
             }
 
+            // Use player transform as protect spawn point if not set
+            if (protectSpawnPoint == null)
+            {
+                protectSpawnPoint = transform;
+                if (showDebugLogs)
+                    Debug.Log("AttackVFXManager: Protect Spawn Point not set, using player transform");
+            }
+
             // Validate VFX prefabs at start
             if (showDetailedDebug)
             {
@@ -111,6 +145,7 @@ namespace StarterAssets
                 ValidateVFXPrefab(attack2VFX, "Attack 2");
                 ValidateVFXPrefab(attack3VFX, "Attack 3");
                 ValidateVFXPrefab(ultimateVFX, "Ultimate");
+                ValidateVFXPrefab(protectVFX, "Protect");
             }
         }
 
@@ -193,6 +228,35 @@ namespace StarterAssets
             {
                 _ultimateVFXSpawned = false;
             }
+
+            // Check Protect Animation
+            if (currentState.IsName("ProtectAxe"))
+            {
+                if (normalizedTime >= protectSpawnTime && !_protectVFXSpawned)
+                {
+                    SpawnProtectVFX();
+                    _protectVFXSpawned = true;
+                }
+                else if (normalizedTime < protectSpawnTime)
+                {
+                    _protectVFXSpawned = false;
+                }
+
+                // Update protect VFX position if following player
+                if (_activeProtectVFX != null && protectFollowPlayer)
+                {
+                    UpdateProtectVFXPosition();
+                }
+            }
+            else
+            {
+                // Destroy protect VFX when leaving protect state
+                if (_activeProtectVFX != null)
+                {
+                    DestroyProtectVFX();
+                }
+                _protectVFXSpawned = false;
+            }
         }
 
         /// <summary>
@@ -246,6 +310,100 @@ namespace StarterAssets
             if (showDetailedDebug)
             {
                 DebugVFXInstance(vfxInstance, attackName);
+            }
+        }
+
+        /// <summary>
+        /// Spawns Protect VFX (shield effect)
+        /// This VFX stays active during the protect animation
+        /// </summary>
+        private void SpawnProtectVFX()
+        {
+            if (protectVFX == null)
+            {
+                if (showDebugLogs)
+                    Debug.LogWarning("AttackVFXManager: No VFX prefab assigned for Protect");
+                return;
+            }
+
+            // Destroy existing protect VFX if any
+            if (_activeProtectVFX != null)
+            {
+                DestroyProtectVFX();
+            }
+
+            // Calculate spawn position
+            Vector3 spawnPosition = protectSpawnPoint.position + protectSpawnOffset;
+            
+            // Calculate spawn rotation
+            Quaternion spawnRotation = Quaternion.Euler(protectRotationOffset);
+
+            // Spawn VFX
+            _activeProtectVFX = Instantiate(protectVFX, spawnPosition, spawnRotation);
+            
+            // Apply scale
+            _activeProtectVFX.transform.localScale = Vector3.one * protectVFXScale;
+
+            // Parent to player if following
+            if (protectFollowPlayer)
+            {
+                _activeProtectVFX.transform.SetParent(protectSpawnPoint);
+            }
+
+            // Play all particle systems
+            if (autoPlayParticleSystems)
+            {
+                PlayAllParticleSystems(_activeProtectVFX);
+            }
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"AttackVFXManager: Spawned Protect VFX at {spawnPosition} (Following: {protectFollowPlayer})");
+            }
+
+            if (showDetailedDebug)
+            {
+                DebugVFXInstance(_activeProtectVFX, "Protect");
+            }
+        }
+
+        /// <summary>
+        /// Updates protect VFX position to follow player
+        /// </summary>
+        private void UpdateProtectVFXPosition()
+        {
+            if (_activeProtectVFX != null && !protectFollowPlayer)
+            {
+                // Manual position update if not parented
+                _activeProtectVFX.transform.position = protectSpawnPoint.position + protectSpawnOffset;
+            }
+        }
+
+        /// <summary>
+        /// Destroys active protect VFX
+        /// </summary>
+        private void DestroyProtectVFX()
+        {
+            if (_activeProtectVFX != null)
+            {
+                // Stop particles first for clean transition
+                ParticleSystem[] particleSystems = _activeProtectVFX.GetComponentsInChildren<ParticleSystem>();
+                foreach (ParticleSystem ps in particleSystems)
+                {
+                    if (ps != null)
+                    {
+                        ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    }
+                }
+
+                // Destroy after particles finish
+                Destroy(_activeProtectVFX, 1f);
+                _activeProtectVFX = null;
+
+                if (showDebugLogs)
+                {
+                    Debug.Log("AttackVFXManager: Destroyed Protect VFX");
+                }
             }
         }
 
@@ -357,16 +515,35 @@ namespace StarterAssets
             SpawnVFX(ultimateVFX, ultimateRotationOffset, "Ultimate (Manual)");
         }
 
+        public void SpawnProtectVFXManual()
+        {
+            SpawnProtectVFX();
+        }
+
+        public void DestroyProtectVFXManual()
+        {
+            DestroyProtectVFX();
+        }
+
         // Visual debug in Scene view
         private void OnDrawGizmosSelected()
         {
             if (vfxSpawnPoint == null) return;
 
-            // Draw spawn point
+            // Draw slash VFX spawn point
             Gizmos.color = Color.red;
             Vector3 spawnPosition = vfxSpawnPoint.position + vfxSpawnPoint.TransformDirection(spawnOffset);
             Gizmos.DrawWireSphere(spawnPosition, 0.1f);
             Gizmos.DrawLine(vfxSpawnPoint.position, spawnPosition);
+
+            // Draw protect VFX spawn point
+            if (protectSpawnPoint != null)
+            {
+                Gizmos.color = Color.cyan;
+                Vector3 protectPos = protectSpawnPoint.position + protectSpawnOffset;
+                Gizmos.DrawWireSphere(protectPos, 0.15f);
+                Gizmos.DrawLine(protectSpawnPoint.position, protectPos);
+            }
             
             if (showRotationGizmos)
             {
@@ -405,6 +582,25 @@ namespace StarterAssets
                     Quaternion rotUlt = vfxSpawnPoint.rotation * Quaternion.Euler(ultimateRotationOffset);
                     Gizmos.DrawRay(spawnPosition, rotUlt * Vector3.forward * 0.4f);
                 }
+
+                // Draw Protect rotation
+                if (protectVFX != null && protectSpawnPoint != null)
+                {
+                    Gizmos.color = Color.white;
+                    Vector3 protectPos = protectSpawnPoint.position + protectSpawnOffset;
+                    Quaternion rotProtect = Quaternion.Euler(protectRotationOffset);
+                    Gizmos.DrawRay(protectPos, rotProtect * Vector3.forward * 0.3f);
+                    Gizmos.DrawRay(protectPos, rotProtect * Vector3.up * 0.3f);
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            // Clean up protect VFX when object is destroyed
+            if (_activeProtectVFX != null)
+            {
+                Destroy(_activeProtectVFX);
             }
         }
     }

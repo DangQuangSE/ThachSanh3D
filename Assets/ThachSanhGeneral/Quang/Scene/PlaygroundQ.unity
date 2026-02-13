@@ -992,6 +992,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 135756642000475821, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
+      propertyPath: protect
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 135756642000475821, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
+      propertyPath: ultimate
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3837663348675104489, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -1214,23 +1222,30 @@ MonoBehaviour:
   attack2VFX: {fileID: 5313456068782518071, guid: 50f1354827c77ef4b99c4dca0ee3411d, type: 3}
   attack3VFX: {fileID: 2060418090655630911, guid: 4fb7673fa1cb7e34ea16f350b1e1fba9, type: 3}
   ultimateVFX: {fileID: 1205478487176026167, guid: 8436419d5cd706242bb810378b8a8835, type: 3}
+  protectVFX: {fileID: 1289543790355709915, guid: b99922c2f59b1a542bdd06ae8bee47ae, type: 3}
   vfxSpawnPoint: {fileID: 293655351}
   spawnOffset: {x: 0, y: 0, z: 0}
   vfxScale: 1
   vfxLifetime: 2
+  protectSpawnPoint: {fileID: 0}
+  protectSpawnOffset: {x: 0, y: 0, z: 0}
+  protectVFXScale: 1
+  protectFollowPlayer: 1
   attack1RotationOffset: {x: 0, y: 0, z: 0}
   attack2RotationOffset: {x: 0, y: 0, z: 0}
   attack3RotationOffset: {x: 0, y: 90, z: 45}
   ultimateRotationOffset: {x: 0, y: 0, z: 0}
+  protectRotationOffset: {x: 0, y: 0, z: 0}
   autoPlayParticleSystems: 1
   useWeaponRotation: 1
   attack1SpawnTime: 0.4
   attack2SpawnTime: 0.4
   attack3SpawnTime: 0.4
   ultimateSpawnTime: 0.5
-  showDebugLogs: 1
-  showDetailedDebug: 1
-  showRotationGizmos: 1
+  protectSpawnTime: 0
+  showDebugLogs: 0
+  showDetailedDebug: 0
+  showRotationGizmos: 0
 --- !u!114 &1766556320
 MonoBehaviour:
   m_ObjectHideFlags: 0

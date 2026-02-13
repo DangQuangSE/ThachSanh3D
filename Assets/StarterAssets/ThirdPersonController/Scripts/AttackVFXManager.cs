@@ -26,11 +26,8 @@ namespace StarterAssets
         [Tooltip("Transform where VFX will spawn (usually weapon tip or hand)")]
         public Transform vfxSpawnPoint;
         
-        [Tooltip("Offset position from spawn point")]
+        [Tooltip("Global offset position from spawn point")]
         public Vector3 spawnOffset = new Vector3(0f, 0f, 0.5f);
-        
-        [Tooltip("Offset rotation from spawn point")]
-        public Vector3 rotationOffset = Vector3.zero;
         
         [Tooltip("VFX scale multiplier")]
         public float vfxScale = 1f;
@@ -38,12 +35,25 @@ namespace StarterAssets
         [Tooltip("Time to destroy VFX after spawning")]
         public float vfxLifetime = 2f;
 
+        [Header("VFX Rotation Per Attack")]
+        [Tooltip("Rotation offset for Attack 1 (X=pitch, Y=yaw, Z=roll)")]
+        public Vector3 attack1RotationOffset = Vector3.zero;
+        
+        [Tooltip("Rotation offset for Attack 2")]
+        public Vector3 attack2RotationOffset = Vector3.zero;
+        
+        [Tooltip("Rotation offset for Attack 3")]
+        public Vector3 attack3RotationOffset = Vector3.zero;
+        
+        [Tooltip("Rotation offset for Ultimate")]
+        public Vector3 ultimateRotationOffset = Vector3.zero;
+
         [Header("VFX Playback Settings")]
         [Tooltip("Auto-play particle systems on spawn (enable if VFX doesn't show)")]
         public bool autoPlayParticleSystems = true;
         
-        [Tooltip("Stop particle systems before destroying")]
-        public bool stopBeforeDestroy = true;
+        [Tooltip("Use weapon rotation or world rotation")]
+        public bool useWeaponRotation = true;
 
         [Header("Timing Settings")]
         [Tooltip("Normalized time (0-1) in Attack 1 animation when VFX spawns")]
@@ -68,6 +78,9 @@ namespace StarterAssets
         
         [Tooltip("Show detailed VFX spawn info")]
         public bool showDetailedDebug = false;
+        
+        [Tooltip("Show rotation gizmos in Scene view")]
+        public bool showRotationGizmos = true;
 
         // Private variables
         private Animator _animator;
@@ -114,7 +127,7 @@ namespace StarterAssets
             {
                 if (normalizedTime >= attack1SpawnTime && !_attack1VFXSpawned)
                 {
-                    SpawnVFX(attack1VFX, "Attack 1");
+                    SpawnVFX(attack1VFX, attack1RotationOffset, "Attack 1");
                     _attack1VFXSpawned = true;
                 }
                 else if (normalizedTime < attack1SpawnTime)
@@ -132,7 +145,7 @@ namespace StarterAssets
             {
                 if (normalizedTime >= attack2SpawnTime && !_attack2VFXSpawned)
                 {
-                    SpawnVFX(attack2VFX, "Attack 2");
+                    SpawnVFX(attack2VFX, attack2RotationOffset, "Attack 2");
                     _attack2VFXSpawned = true;
                 }
                 else if (normalizedTime < attack2SpawnTime)
@@ -150,7 +163,7 @@ namespace StarterAssets
             {
                 if (normalizedTime >= attack3SpawnTime && !_attack3VFXSpawned)
                 {
-                    SpawnVFX(attack3VFX, "Attack 3");
+                    SpawnVFX(attack3VFX, attack3RotationOffset, "Attack 3");
                     _attack3VFXSpawned = true;
                 }
                 else if (normalizedTime < attack3SpawnTime)
@@ -168,7 +181,7 @@ namespace StarterAssets
             {
                 if (normalizedTime >= ultimateSpawnTime && !_ultimateVFXSpawned)
                 {
-                    SpawnVFX(ultimateVFX, "Ultimate Attack");
+                    SpawnVFX(ultimateVFX, ultimateRotationOffset, "Ultimate Attack");
                     _ultimateVFXSpawned = true;
                 }
                 else if (normalizedTime < ultimateSpawnTime)
@@ -183,9 +196,9 @@ namespace StarterAssets
         }
 
         /// <summary>
-        /// Spawns VFX at the spawn point
+        /// Spawns VFX at the spawn point with custom rotation
         /// </summary>
-        private void SpawnVFX(GameObject vfxPrefab, string attackName)
+        private void SpawnVFX(GameObject vfxPrefab, Vector3 rotationOffset, string attackName)
         {
             if (vfxPrefab == null)
             {
@@ -194,9 +207,21 @@ namespace StarterAssets
                 return;
             }
 
-            // Calculate spawn position and rotation
+            // Calculate spawn position
             Vector3 spawnPosition = vfxSpawnPoint.position + vfxSpawnPoint.TransformDirection(spawnOffset);
-            Quaternion spawnRotation = vfxSpawnPoint.rotation * Quaternion.Euler(rotationOffset);
+            
+            // Calculate spawn rotation based on settings
+            Quaternion spawnRotation;
+            if (useWeaponRotation)
+            {
+                // Use weapon rotation + offset
+                spawnRotation = vfxSpawnPoint.rotation * Quaternion.Euler(rotationOffset);
+            }
+            else
+            {
+                // Use world rotation + offset
+                spawnRotation = Quaternion.Euler(rotationOffset);
+            }
 
             // Spawn VFX
             GameObject vfxInstance = Instantiate(vfxPrefab, spawnPosition, spawnRotation);
@@ -215,7 +240,7 @@ namespace StarterAssets
 
             if (showDebugLogs)
             {
-                Debug.Log($"AttackVFXManager: Spawned VFX for {attackName} at {spawnPosition}");
+                Debug.Log($"AttackVFXManager: Spawned VFX for {attackName} at {spawnPosition} with rotation {spawnRotation.eulerAngles}");
             }
 
             if (showDetailedDebug)
@@ -314,37 +339,72 @@ namespace StarterAssets
         /// </summary>
         public void SpawnAttack1VFX()
         {
-            SpawnVFX(attack1VFX, "Attack 1 (Manual)");
+            SpawnVFX(attack1VFX, attack1RotationOffset, "Attack 1 (Manual)");
         }
 
         public void SpawnAttack2VFX()
         {
-            SpawnVFX(attack2VFX, "Attack 2 (Manual)");
+            SpawnVFX(attack2VFX, attack2RotationOffset, "Attack 2 (Manual)");
         }
 
         public void SpawnAttack3VFX()
         {
-            SpawnVFX(attack3VFX, "Attack 3 (Manual)");
+            SpawnVFX(attack3VFX, attack3RotationOffset, "Attack 3 (Manual)");
         }
 
         public void SpawnUltimateVFX()
         {
-            SpawnVFX(ultimateVFX, "Ultimate (Manual)");
+            SpawnVFX(ultimateVFX, ultimateRotationOffset, "Ultimate (Manual)");
         }
 
         // Visual debug in Scene view
         private void OnDrawGizmosSelected()
         {
-            if (vfxSpawnPoint != null)
+            if (vfxSpawnPoint == null) return;
+
+            // Draw spawn point
+            Gizmos.color = Color.red;
+            Vector3 spawnPosition = vfxSpawnPoint.position + vfxSpawnPoint.TransformDirection(spawnOffset);
+            Gizmos.DrawWireSphere(spawnPosition, 0.1f);
+            Gizmos.DrawLine(vfxSpawnPoint.position, spawnPosition);
+            
+            if (showRotationGizmos)
             {
-                Gizmos.color = Color.red;
-                Vector3 spawnPosition = vfxSpawnPoint.position + vfxSpawnPoint.TransformDirection(spawnOffset);
-                Gizmos.DrawWireSphere(spawnPosition, 0.1f);
-                Gizmos.DrawLine(vfxSpawnPoint.position, spawnPosition);
-                
-                // Draw direction arrow
-                Gizmos.color = Color.yellow;
+                // Draw weapon forward direction (original)
+                Gizmos.color = Color.blue;
                 Gizmos.DrawRay(spawnPosition, vfxSpawnPoint.forward * 0.5f);
+                
+                // Draw Attack 1 rotation
+                if (attack1VFX != null)
+                {
+                    Gizmos.color = Color.green;
+                    Quaternion rot1 = vfxSpawnPoint.rotation * Quaternion.Euler(attack1RotationOffset);
+                    Gizmos.DrawRay(spawnPosition, rot1 * Vector3.forward * 0.4f);
+                }
+                
+                // Draw Attack 2 rotation
+                if (attack2VFX != null)
+                {
+                    Gizmos.color = Color.yellow;
+                    Quaternion rot2 = vfxSpawnPoint.rotation * Quaternion.Euler(attack2RotationOffset);
+                    Gizmos.DrawRay(spawnPosition, rot2 * Vector3.forward * 0.4f);
+                }
+                
+                // Draw Attack 3 rotation
+                if (attack3VFX != null)
+                {
+                    Gizmos.color = Color.cyan;
+                    Quaternion rot3 = vfxSpawnPoint.rotation * Quaternion.Euler(attack3RotationOffset);
+                    Gizmos.DrawRay(spawnPosition, rot3 * Vector3.forward * 0.4f);
+                }
+                
+                // Draw Ultimate rotation
+                if (ultimateVFX != null)
+                {
+                    Gizmos.color = Color.magenta;
+                    Quaternion rotUlt = vfxSpawnPoint.rotation * Quaternion.Euler(ultimateRotationOffset);
+                    Gizmos.DrawRay(spawnPosition, rotUlt * Vector3.forward * 0.4f);
+                }
             }
         }
     }

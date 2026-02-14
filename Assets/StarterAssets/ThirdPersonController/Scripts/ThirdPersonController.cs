@@ -73,6 +73,13 @@ namespace StarterAssets
         [Tooltip("Enable/disable ultimate skill")]
         public bool UltimateEnabled = true;
 
+        [Header("E Skill (Attack360)")]
+        [Tooltip("Cooldown time for E skill in seconds")]
+        public float ESkillCooldown = 8.0f;
+
+        [Tooltip("Enable/disable E skill")]
+        public bool ESkillEnabled = true;
+
         [Header("Cinemachine")]
         [Tooltip("The follow target set in the Cinemachine Virtual Camera that the camera will follow")]
         public GameObject CinemachineCameraTarget;
@@ -117,6 +124,14 @@ namespace StarterAssets
         private bool _isUltimateReady = true;
         private bool _isPerformingUltimate = false;
 
+        // protect
+        private bool _isProtecting = false;
+
+        // eskill (Attack360)
+        private float _eskillCooldownTimer = 0f;
+        private bool _isESkillReady = true;
+        private bool _isPerformingESkill = false;
+
         // animation IDs
         private int _animIDSpeed;
         private int _animIDGrounded;
@@ -127,6 +142,8 @@ namespace StarterAssets
         private int _animIDAttack2;
         private int _animIDAttack3;
         private int _animIDUltimate;
+        private int _animIDProtect;
+        private int _animIDESkill;
 
 #if ENABLE_INPUT_SYSTEM 
         private PlayerInput _playerInput;
@@ -191,6 +208,8 @@ namespace StarterAssets
             Move();
             HandleAttack();
             HandleUltimate();
+            HandleProtect();
+            HandleESkill();
             
             // Manual root motion handling when "Apply Root Motion = Handled by Script"
             if (_hasAnimator && !_animator.applyRootMotion)
@@ -215,6 +234,8 @@ namespace StarterAssets
             _animIDAttack2 = Animator.StringToHash("Attack2");
             _animIDAttack3 = Animator.StringToHash("Attack3");
             _animIDUltimate = Animator.StringToHash("Ultimate");
+            _animIDProtect = Animator.StringToHash("Protect");
+            _animIDESkill = Animator.StringToHash("ESkill");
         }
 
         private void GroundedCheck()
@@ -258,6 +279,8 @@ namespace StarterAssets
             // Block movement during attack animations or ultimate
             bool isInAttackState = false;
             bool isInUltimateState = false;
+            bool isInProtectState = false;
+            bool isInESkillState = false;
             if (_hasAnimator)
             {
                 AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
@@ -265,10 +288,12 @@ namespace StarterAssets
                                  currentState.IsName("Attack_2") || 
                                  currentState.IsName("Attack_3");
                 isInUltimateState = currentState.IsName("UntimateAttack_1");
+                isInProtectState = currentState.IsName("ProtectAxe");
+                isInESkillState = currentState.IsName("Attack360");
             }
             
-            // Don't allow HORIZONTAL movement during attack or ultimate, but ALLOW vertical (gravity)
-            if (isInAttackState || isInUltimateState)
+            // Don't allow HORIZONTAL movement during attack, ultimate, protect or eskill, but ALLOW vertical (gravity)
+            if (isInAttackState || isInUltimateState || isInProtectState || isInESkillState)
             {
                 // Apply ONLY vertical movement (gravity)
                 Vector3 verticalMove = new Vector3(0.0f, _verticalVelocity, 0.0f);
@@ -281,7 +306,7 @@ namespace StarterAssets
                     _animator.SetFloat(_animIDMotionSpeed, 0f);
                 }
                 
-                return; // Exit early - no horizontal movement during attack/ultimate
+                return; // Exit early - no horizontal movement during attack/ultimate/protect/eskill
             }
             
             // set target speed based on move speed, sprint speed and if sprint is pressed
@@ -578,6 +603,155 @@ namespace StarterAssets
             }
         }
 
+        private void HandleProtect()
+        {
+            // Check if currently performing protect
+            bool isInProtectState = false;
+            if (_hasAnimator)
+            {
+                AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+                isInProtectState = currentState.IsName("ProtectAxe");
+                
+                if (isInProtectState)
+                {
+                    _isProtecting = true;
+                }
+                else if (_isProtecting)
+                {
+                    _isProtecting = false;
+                }
+            }
+
+            // Handle protect input
+            if (_input.protect)
+            {
+                _input.protect = false;
+
+                if (!Grounded)
+                {
+                    Debug.Log("Cannot use protect in air!");
+                    return;
+                }
+
+                if (_isProtecting || isInProtectState)
+                {
+                    Debug.Log("Already protecting!");
+                    return;
+                }
+
+                // Start protect
+                if (_hasAnimator)
+                {
+                    // Reset attack combo
+                    _attackCount = 0;
+                    _attackQueued = false;
+                    _lastProcessedAttackCount = 0;
+
+                    // Clear all triggers
+                    _animator.ResetTrigger(_animIDAttack1);
+                    _animator.ResetTrigger(_animIDAttack2);
+                    _animator.ResetTrigger(_animIDAttack3);
+                    _animator.ResetTrigger(_animIDUltimate);
+                    _animator.ResetTrigger(_animIDProtect);
+                    
+                    // Trigger protect animation
+                    _animator.SetTrigger(_animIDProtect);
+                    
+                    _isProtecting = true;
+
+                    Debug.Log("Protect activated!");
+                }
+            }
+        }
+
+        private void HandleESkill()
+        {
+            // Update cooldown timer
+            if (!_isESkillReady && _eskillCooldownTimer > 0)
+            {
+                _eskillCooldownTimer -= Time.deltaTime;
+                if (_eskillCooldownTimer <= 0)
+                {
+                    _isESkillReady = true;
+                    Debug.Log("E Skill (Attack360) is ready!");
+                }
+            }
+
+            // Check if currently performing E skill
+            bool isInESkillState = false;
+            if (_hasAnimator)
+            {
+                AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+                isInESkillState = currentState.IsName("Attack360");
+                
+                if (isInESkillState)
+                {
+                    _isPerformingESkill = true;
+                }
+                else if (_isPerformingESkill)
+                {
+                    _isPerformingESkill = false;
+                }
+            }
+
+            // Handle E skill input
+            if (_input.eskill)
+            {
+                _input.eskill = false;
+
+                if (!ESkillEnabled)
+                {
+                    Debug.LogWarning("E Skill is disabled!");
+                    return;
+                }
+
+                if (!_isESkillReady)
+                {
+                    Debug.Log($"E Skill on cooldown! {_eskillCooldownTimer:F1}s remaining");
+                    return;
+                }
+
+                if (!Grounded)
+                {
+                    Debug.Log("Cannot use E Skill in air!");
+                    return;
+                }
+
+                if (_isPerformingESkill || isInESkillState)
+                {
+                    Debug.Log("Already performing E Skill!");
+                    return;
+                }
+
+                // Start E skill (Attack360)
+                if (_hasAnimator)
+                {
+                    // Reset attack combo
+                    _attackCount = 0;
+                    _attackQueued = false;
+                    _lastProcessedAttackCount = 0;
+                    _attackCooldownTimer = 0f;
+
+                    // Clear all triggers
+                    _animator.ResetTrigger(_animIDAttack1);
+                    _animator.ResetTrigger(_animIDAttack2);
+                    _animator.ResetTrigger(_animIDAttack3);
+                    _animator.ResetTrigger(_animIDUltimate);
+                    _animator.ResetTrigger(_animIDProtect);
+                    _animator.ResetTrigger(_animIDESkill);
+                    
+                    // Trigger E skill animation
+                    _animator.SetTrigger(_animIDESkill);
+                    
+                    _isESkillReady = false;
+                    _eskillCooldownTimer = ESkillCooldown;
+                    _isPerformingESkill = true;
+
+                    Debug.Log("E Skill (Attack360) activated!");
+                }
+            }
+        }
+
         private void OnAnimatorMove()
         {
             // This callback is only used when Animator "Apply Root Motion" is TRUE
@@ -632,6 +806,7 @@ namespace StarterAssets
                                  currentState.IsName("Attack_2") || 
                                  currentState.IsName("Attack_3");
             bool isInUltimateState = currentState.IsName("UntimateAttack_1");
+            bool isInESkillState = currentState.IsName("Attack360");
             
             if (isInAttackState)
             {
@@ -659,6 +834,13 @@ namespace StarterAssets
                     _controller.Move(horizontalMotion);
                     // DON'T touch _verticalVelocity - let gravity work!
                 }
+            }
+            else if (isInESkillState)
+            {
+                // For Attack360: Apply horizontal movement for spinning effect
+                Vector3 rootMotionDelta = _animator.deltaPosition;
+                Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                _controller.Move(horizontalMotion);
             }
         }
 
@@ -787,6 +969,22 @@ namespace StarterAssets
         public float GetUltimateRemainingCooldown()
         {
             return _ultimateCooldownTimer;
+        }
+
+        public float GetESkillCooldownProgress()
+        {
+            if (_isESkillReady) return 1f;
+            return 1f - (_eskillCooldownTimer / ESkillCooldown);
+        }
+
+        public bool IsESkillReady()
+        {
+            return _isESkillReady;
+        }
+
+        public float GetESkillRemainingCooldown()
+        {
+            return _eskillCooldownTimer;
         }
     }
 }

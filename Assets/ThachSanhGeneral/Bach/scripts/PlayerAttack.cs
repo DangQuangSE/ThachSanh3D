@@ -60,7 +60,17 @@ public class PlayerAttack : MonoBehaviour
                 Debug.Log($"Player hit {hitCollider.name} for {attackDamage} damage!");
                 continue;
             }
-            
+
+            // Try to damage Chan Tinh
+            ChanTinhBossController chanTinhBoss = hitCollider.GetComponent<ChanTinhBossController>();
+            if (chanTinhBoss is null) Debug.Log("Khong hit dc collider");
+            if (chanTinhBoss != null && !chanTinhBoss.IsDead())
+            {
+                chanTinhBoss.TakeDamage(attackDamage);
+                Debug.Log($"Player hit {hitCollider.name} for {attackDamage} damage!");
+                continue;
+            }
+
             // Try to damage other enemies (if you have Enemy script)
             // EnemyHealth enemy = hitCollider.GetComponent<EnemyHealth>();
             // if (enemy != null)

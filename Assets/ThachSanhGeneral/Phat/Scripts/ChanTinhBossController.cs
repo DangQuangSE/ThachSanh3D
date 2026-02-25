@@ -101,7 +101,6 @@ public class ChanTinhBossController : MonoBehaviour
         swipeHash = Animator.StringToHash("Swipe");
         punchHash = Animator.StringToHash("Punch");
         jumpAttackHash = Animator.StringToHash("JumpAttack");
-
         hitHash = Animator.StringToHash("Hit"); // Thêm
 
         agent.updateRotation = true; // Cho phép NavMeshAgent tự động xoay theo hướng di chuyển

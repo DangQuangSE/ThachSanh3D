@@ -1098,31 +1098,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.018806
+      value: -0.22040595
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.15745
+      value: -0.15744996
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.016718
+      value: 0.13844362
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.1706202
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: 0.9853369
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1130,7 +1130,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: 160.352
       objectReference: {fileID: 0}
     - target: {fileID: 95180156616511355, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
@@ -1941,7 +1941,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0504b64b25de76645a828c2fca352022, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  maxHealth: 1000
+  maxHealth: 100
   attackRange: 3
   detectionRange: 15
   walkSpeed: 2
@@ -1953,7 +1953,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   damageColor: {r: 1, g: 0, b: 0, a: 1}
-  damageFlashDuration: 0.1
+  damageFlashDuration: 0.5
   roarCooldown: 10
   swipeCooldown: 3
   punchCooldown: 2

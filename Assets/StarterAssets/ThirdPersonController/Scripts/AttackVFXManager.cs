@@ -35,7 +35,7 @@ namespace StarterAssets
         public Transform vfxSpawnPoint;
         
         [Tooltip("Global offset position from spawn point")]
-        public Vector3 spawnOffset = new Vector3(0f, 0f, 0.5f);
+        public Vector3 spawnOffset = Vector3.zero;
         
         [Tooltip("VFX scale multiplier")]
         public float vfxScale = 1f;

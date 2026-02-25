@@ -2895,7 +2895,7 @@ MonoBehaviour:
   protectVFX: {fileID: 1289543790355709915, guid: 25aeb6a692de5e9448da9b8655cc6e3a, type: 3}
   eskillVFX: {fileID: 856368647163548680, guid: 421bf6827c0a38e4ea49ae41f78f979a, type: 3}
   vfxSpawnPoint: {fileID: 691251139}
-  spawnOffset: {x: 0, y: 0, z: 0.5}
+  spawnOffset: {x: 0, y: 0, z: 0}
   vfxScale: 1
   vfxLifetime: 2
   protectSpawnPoint: {fileID: 0}

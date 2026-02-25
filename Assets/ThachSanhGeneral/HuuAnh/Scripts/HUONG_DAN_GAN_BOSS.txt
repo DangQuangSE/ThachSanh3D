@@ -1,0 +1,41 @@
+=== HƯỚNG DẪN GẮN BOSSDaiBangController (chỉ trong HuuAnh) ===
+
+1. GẮN SCRIPT VÀO ĐÂU
+   - Mở scene có Boss (vd DaiBang).
+   - Hierarchy: chọn GameObject BOSS (finalv5 - object gốc có Armature, MagicSpawnPoint...).
+   - Inspector: Add Component -> tìm "BossDaiBangController" -> thêm vào.
+   - Cùng object này phải có: Animator (Controller = BossDaiBang), NavMeshAgent.
+
+2. GÁN REFERENCE TRONG INSPECTOR (BossDaiBangController)
+   - Target: kéo Player (hoặc PlayerArmature) từ Hierarchy vào.
+   - Attack Point: kéo MagicSpawnPoint (con của finalv5) vào.
+   - Magic Spawn Point: kéo MagicSpawnPoint vào.
+   - Player Layer: chọn layer của Player (vd "Player").
+   - Fx Green Hit / Fx Fireball / Fx Weapon Effect: kéo prefab từ Project
+     HuuAnh/VFX/Free Game VFX/Prefab vào (có thể để None nếu chưa cần hiệu ứng).
+
+3. ANIMATOR
+   - Trên cùng object Boss: Animator -> Controller phải là BossDaiBang (HuuAnh).
+   - Avatar: gán Avatar của model boss (lấy từ file .fbx model, tab Rig).
+
+4. NAVMESH (để boss đuổi được)
+   - Window -> AI -> Navigation -> Bake -> Bake (scene cần có ground đã đặt Static).
+
+5. ANIMATION EVENT (để boss gây damage và VFX)
+   - Clip Punch: event (frame đấm trúng) -> DealDamageToPlayer, SpawnPunchMagic.
+   - Clip Uppercut: event (frame đánh trúng) -> DealDamageToPlayer.
+   - Clip Jump Attack: event -> DealDamageToPlayer (nếu đánh gần), SpawnJumpAttackMagic.
+   - Clip Magic Attack: event -> SpawnMagicAttack.
+   - Nếu thiếu event thì boss đánh sẽ không trừ máu player.
+
+6. DAMAGE (Boss trừ máu Player / Player trừ máu Boss) – chỉ cấu hình trong scene HuuAnh
+   - Boss -> Player: Gán Player Layer = layer của object Player. Clip Punch/Uppercut/Jump Attack cần Animation Event gọi DealDamageToPlayer (mục 5).
+   - Player -> Boss: Boss tự nhận damage khi player đánh và đứng gần (script HuuAnh, không sửa Bach). Trong Inspector BossDaiBangController: Player Hit Range (mặc định 3), Fallback Player Damage (mặc định 25). Player phải gán vào Target.
+
+7. THANH MÁU TRÊN ĐẦU BOSS (chỉ HuuAnh)
+   - Trên BossHealthBarCanvas (con của finalv5): gắn script BossDaiBangHealthBarWorld (không dùng BossHealthBarWorld của nhóm khác).
+   - Canvas: Inspector → Render Mode = World Space (bắt buộc để thanh nổi trên đầu boss).
+   - Slider/Text/Fill: có thể để trống, script sẽ tự tìm trong con; hoặc gán tay Health Slider, Boss Name Text, Fill Image.
+   - Nếu thanh vẫn không hiện: xem Console có cảnh báo "Render Mode = World Space" hoặc "Không tìm thấy Slider".
+
+Không chỉnh file ngoài folder HuuAnh.

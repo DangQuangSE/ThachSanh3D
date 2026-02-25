@@ -76,9 +76,16 @@ namespace StarterAssets
         [Header("E Skill (Attack360)")]
         [Tooltip("Cooldown time for E skill in seconds")]
         public float ESkillCooldown = 8.0f;
-
         [Tooltip("Enable/disable E skill")]
         public bool ESkillEnabled = true;
+
+        [Header("Combat Targeting")]
+        [Tooltip("Automatically face the nearest enemy when attacking or using skills")]
+        public bool AutoAimOnCombat = true;
+        [Tooltip("Max range to search for a target to auto-aim at")]
+        public float AutoAimRange = 15f;
+        [Tooltip("How fast player snaps to face the target (degrees/second)")]
+        public float AutoAimRotateSpeed = 720f;
 
         [Header("Cinemachine")]
         [Tooltip("The follow target set in the Cinemachine Virtual Camera that the camera will follow")]
@@ -145,6 +152,8 @@ namespace StarterAssets
         private int _animIDProtect;
         private int _animIDESkill;
 
+        private Transform _combatTarget;
+
 #if ENABLE_INPUT_SYSTEM 
         private PlayerInput _playerInput;
 #endif
@@ -202,7 +211,7 @@ namespace StarterAssets
         private void Update()
         {
             _hasAnimator = TryGetComponent(out _animator);
-
+            FindCombatTarget();
             JumpAndGravity();
             GroundedCheck();
             Move();
@@ -210,6 +219,7 @@ namespace StarterAssets
             HandleUltimate();
             HandleProtect();
             HandleESkill();
+            FaceTargetDuringCombat();
             
             // Manual root motion handling when "Apply Root Motion = Handled by Script"
             if (_hasAnimator && !_animator.applyRootMotion)
@@ -418,6 +428,10 @@ namespace StarterAssets
                 {
                     if (!isInAttackState)
                     {
+                        // Auto-aim toward nearest enemy before starting combo
+                        if (AutoAimOnCombat && _combatTarget != null)
+                            SnapFaceTarget(_combatTarget.position);
+
                         // Start new combo - only when NOT attacking
                         _attackCount = 1;
                         _lastAttackTime = Time.time;
@@ -574,6 +588,10 @@ namespace StarterAssets
                 // Start ultimate
                 if (_hasAnimator)
                 {
+                    // Auto-aim toward nearest enemy before ultimate
+                    if (AutoAimOnCombat && _combatTarget != null)
+                        SnapFaceTarget(_combatTarget.position);
+
                     // Reset attack combo
                     _attackCount = 0;
                     _attackQueued = false;
@@ -726,6 +744,10 @@ namespace StarterAssets
                 // Start E skill (Attack360)
                 if (_hasAnimator)
                 {
+                    // Auto-aim toward nearest enemy before E skill
+                    if (AutoAimOnCombat && _combatTarget != null)
+                        SnapFaceTarget(_combatTarget.position);
+
                     // Reset attack combo
                     _attackCount = 0;
                     _attackQueued = false;
@@ -754,8 +776,6 @@ namespace StarterAssets
 
         private void OnAnimatorMove()
         {
-            // This callback is only used when Animator "Apply Root Motion" is TRUE
-            // For "Handled by Script" mode, use ApplyRootMotionManually() instead
             if (_hasAnimator && _controller != null)
             {
                 AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
@@ -763,32 +783,28 @@ namespace StarterAssets
                                      currentState.IsName("Attack_2") || 
                                      currentState.IsName("Attack_3");
                 bool isInUltimateState = currentState.IsName("UntimateAttack_1");
-                
+
                 if (isInAttackState)
                 {
-                    // For attacks: Only apply horizontal movement (XZ), keep Y from gravity
                     Vector3 rootMotionDelta = _animator.deltaPosition;
                     Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                    horizontalMotion = ClampMotionAwayFromTarget(horizontalMotion);
                     _controller.Move(horizontalMotion);
                 }
                 else if (isInUltimateState)
                 {
                     Vector3 rootMotionDelta = _animator.deltaPosition;
                     float normalizedTime = currentState.normalizedTime % 1f;
-                    
-                    // Phase 1 (0-35%): Jump up - FULL root motion (XYZ) + disable gravity
                     if (normalizedTime < 0.35f)
                     {
                         _controller.Move(rootMotionDelta);
                         _verticalVelocity = 0f;
                     }
-                    // Phase 2 (35-100%): Attack and fall - XZ from animation + enable gravity
                     else
                     {
-                        // Only horizontal movement from animation
                         Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                        horizontalMotion = ClampMotionAwayFromTarget(horizontalMotion);
                         _controller.Move(horizontalMotion);
-                        // DON'T touch _verticalVelocity - let gravity work!
                     }
                 }
             }
@@ -796,48 +812,40 @@ namespace StarterAssets
 
         private void ApplyRootMotionManually()
         {
-            // This method handles root motion when Animator is set to "Handled by Script"
-            // It's called every frame from Update() if applyRootMotion is false
-            
             if (!_animator || !_hasAnimator || !_controller) return;
-    
+
             AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
             bool isInAttackState = currentState.IsName("Attack_1") || 
                                  currentState.IsName("Attack_2") || 
                                  currentState.IsName("Attack_3");
             bool isInUltimateState = currentState.IsName("UntimateAttack_1");
             bool isInESkillState = currentState.IsName("Attack360");
-            
+
             if (isInAttackState)
             {
-                // For attacks: Only apply horizontal movement (XZ), keep Y from gravity
                 Vector3 rootMotionDelta = _animator.deltaPosition;
                 Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                horizontalMotion = ClampMotionAwayFromTarget(horizontalMotion);
                 _controller.Move(horizontalMotion);
             }
             else if (isInUltimateState)
             {
                 Vector3 rootMotionDelta = _animator.deltaPosition;
                 float normalizedTime = currentState.normalizedTime % 1f;
-                
-                // Phase 1 (0-35%): Jump up - FULL root motion (XYZ) + disable gravity
                 if (normalizedTime < 0.35f)
                 {
                     _controller.Move(rootMotionDelta);
                     _verticalVelocity = 0f;
                 }
-                // Phase 2 (35-100%): Attack and fall - XZ from animation + enable gravity
                 else
                 {
-                    // Only horizontal movement from animation
                     Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                    horizontalMotion = ClampMotionAwayFromTarget(horizontalMotion);
                     _controller.Move(horizontalMotion);
-                    // DON'T touch _verticalVelocity - let gravity work!
                 }
             }
             else if (isInESkillState)
             {
-                // For Attack360: Apply horizontal movement for spinning effect
                 Vector3 rootMotionDelta = _animator.deltaPosition;
                 Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
                 _controller.Move(horizontalMotion);
@@ -985,6 +993,57 @@ namespace StarterAssets
         public float GetESkillRemainingCooldown()
         {
             return _eskillCooldownTimer;
+        }
+
+        private void FindCombatTarget()
+        {
+            if (!AutoAimOnCombat) return;
+            BossController[] bosses = Object.FindObjectsOfType<BossController>();
+            float closestDist = AutoAimRange;
+            Transform closest = null;
+            foreach (BossController boss in bosses)
+            {
+                if (boss.IsDead()) continue;
+                float dist = Vector3.Distance(transform.position, boss.transform.position);
+                if (dist < closestDist) { closestDist = dist; closest = boss.transform; }
+            }
+            _combatTarget = closest;
+        }
+
+        private void SnapFaceTarget(Vector3 targetPosition)
+        {
+            Vector3 dir = targetPosition - transform.position;
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.001f) return;
+            transform.rotation = Quaternion.LookRotation(dir);
+        }
+
+        private void FaceTargetDuringCombat()
+        {
+            if (!AutoAimOnCombat || _combatTarget == null || !_hasAnimator) return;
+            AnimatorStateInfo st = _animator.GetCurrentAnimatorStateInfo(0);
+            bool inCombat = st.IsName("Attack_1") || st.IsName("Attack_2") || st.IsName("Attack_3")
+                         || st.IsName("UntimateAttack_1") || st.IsName("Attack360");
+            if (!inCombat) return;
+            Vector3 dir = _combatTarget.position - transform.position;
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.001f) return;
+            transform.rotation = Quaternion.RotateTowards(
+                transform.rotation, Quaternion.LookRotation(dir), AutoAimRotateSpeed * Time.deltaTime);
+        }
+
+        private Vector3 ClampMotionAwayFromTarget(Vector3 horizontalMotion)
+        {
+            if (_combatTarget == null) return horizontalMotion;
+            Vector3 toTarget = _combatTarget.position - transform.position;
+            toTarget.y = 0f;
+            float dist = toTarget.magnitude;
+            if (dist < 0.01f) return Vector3.zero;
+            Vector3 toTargetDir = toTarget / dist;
+            float approaching = Vector3.Dot(horizontalMotion, toTargetDir);
+            if (approaching > 0f && dist < 1.2f)
+                horizontalMotion -= toTargetDir * approaching;
+            return horizontalMotion;
         }
     }
 }

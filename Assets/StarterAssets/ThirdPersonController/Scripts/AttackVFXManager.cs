@@ -30,6 +30,10 @@ namespace StarterAssets
         [Tooltip("VFX prefab for E Skill (Attack360 - 360 degree slash)")]
         public GameObject eskillVFX;
 
+        [Header("VFX Prefabs - Ultimate Boss Impact")]
+        [Tooltip("VFX prefab spawned at boss ground position when ultimate hits")]
+        public GameObject ultimateBossImpactVFX;
+
         [Header("VFX Spawn Settings")]
         [Tooltip("Transform where VFX will spawn (usually weapon tip or hand)")]
         public Transform vfxSpawnPoint;
@@ -74,6 +78,20 @@ namespace StarterAssets
 
         [Tooltip("Rotation offset for E Skill")]
         public Vector3 eskillRotationOffset = Vector3.zero;
+
+        [Header("Ultimate Boss Impact VFX Settings")]
+        [Tooltip("Offset from boss ground position")]
+        public Vector3 ultimateBossImpactOffset = new Vector3(0f, 0.1f, 0f);
+
+        [Tooltip("Scale for Ultimate Boss Impact VFX")]
+        public float ultimateBossImpactScale = 1f;
+
+        [Tooltip("Lifetime of Ultimate Boss Impact VFX")]
+        public float ultimateBossImpactLifetime = 3f;
+
+        [Tooltip("Normalized time (0-1) in Ultimate animation when Boss Impact VFX spawns")]
+        [Range(0f, 1f)]
+        public float ultimateBossImpactSpawnTime = 0.5f;
 
         [Header("VFX Playback Settings")]
         [Tooltip("Auto-play particle systems on spawn (enable if VFX doesn't show)")]
@@ -123,6 +141,7 @@ namespace StarterAssets
         private bool _attack2VFXSpawned = false;
         private bool _attack3VFXSpawned = false;
         private bool _ultimateVFXSpawned = false;
+        private bool _ultimateBossImpactVFXSpawned = false;
         private bool _protectVFXSpawned = false;
         private bool _eskillVFXSpawned = false;
         private GameObject _activeProtectVFX = null;
@@ -236,10 +255,22 @@ namespace StarterAssets
                 {
                     _ultimateVFXSpawned = false;
                 }
+
+                // Spawn Boss Impact VFX at boss ground position
+                if (normalizedTime >= ultimateBossImpactSpawnTime && !_ultimateBossImpactVFXSpawned)
+                {
+                    SpawnUltimateBossImpactVFX();
+                    _ultimateBossImpactVFXSpawned = true;
+                }
+                else if (normalizedTime < ultimateBossImpactSpawnTime)
+                {
+                    _ultimateBossImpactVFXSpawned = false;
+                }
             }
             else
             {
                 _ultimateVFXSpawned = false;
+                _ultimateBossImpactVFXSpawned = false;
             }
 
             // Check Protect Animation
@@ -395,6 +426,58 @@ namespace StarterAssets
             if (showDetailedDebug)
             {
                 DebugVFXInstance(_activeProtectVFX, "Protect");
+            }
+        }
+
+        /// <summary>
+        /// Spawns Ultimate Boss Impact VFX at the nearest boss ground position
+        /// </summary>
+        private void SpawnUltimateBossImpactVFX()
+        {
+            if (ultimateBossImpactVFX == null)
+            {
+                if (showDebugLogs)
+                    Debug.LogWarning("AttackVFXManager: No VFX prefab assigned for Ultimate Boss Impact");
+                return;
+            }
+
+            // Find nearest alive boss
+            BossController[] bosses = Object.FindObjectsOfType<BossController>();
+            Transform closestBoss = null;
+            float closestDist = float.MaxValue;
+            foreach (BossController boss in bosses)
+            {
+                if (boss.IsDead()) continue;
+                float dist = Vector3.Distance(transform.position, boss.transform.position);
+                if (dist < closestDist)
+                {
+                    closestDist = dist;
+                    closestBoss = boss.transform;
+                }
+            }
+
+            if (closestBoss == null)
+            {
+                if (showDebugLogs)
+                    Debug.LogWarning("AttackVFXManager: No alive boss found for Ultimate Boss Impact VFX");
+                return;
+            }
+
+            // Spawn at boss ground position
+            Vector3 spawnPosition = closestBoss.position + ultimateBossImpactOffset;
+            GameObject vfxInstance = Instantiate(ultimateBossImpactVFX, spawnPosition, Quaternion.identity);
+            vfxInstance.transform.localScale = Vector3.one * ultimateBossImpactScale;
+
+            if (autoPlayParticleSystems)
+            {
+                PlayAllParticleSystems(vfxInstance);
+            }
+
+            Destroy(vfxInstance, ultimateBossImpactLifetime);
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"AttackVFXManager: Spawned Ultimate Boss Impact VFX at {spawnPosition} (Boss: {closestBoss.name})");
             }
         }
 
@@ -559,6 +642,11 @@ namespace StarterAssets
         public void SpawnESkillVFX()
         {
             SpawnVFX(eskillVFX, eskillRotationOffset, "E Skill (Manual)");
+        }
+
+        public void SpawnUltimateBossImpactVFXManual()
+        {
+            SpawnUltimateBossImpactVFX();
         }
 
         // Visual debug in Scene view

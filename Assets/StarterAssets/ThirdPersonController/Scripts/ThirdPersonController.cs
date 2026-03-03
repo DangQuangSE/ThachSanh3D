@@ -231,6 +231,51 @@ namespace StarterAssets
         {
             _hasAnimator = TryGetComponent(out _animator);
             FindCombatTarget();
+            
+            // Check if currently in Protect state (Skill Q)
+            bool isInProtectState = false;
+            if (_hasAnimator)
+            {
+                AnimatorStateInfo st = _animator.GetCurrentAnimatorStateInfo(0);
+                isInProtectState = st.IsName("ProtectAxe");
+            }
+            
+            // During Protect: invincible + block all other input
+            if (isInProtectState)
+            {
+                _isProtecting = true;
+                
+                // Enable invincibility
+                PlayerHealth ph = GetComponent<PlayerHealth>();
+                if (ph != null) ph.SetInvincible(true);
+                
+                // Consume and discard all inputs
+                _input.attack = false;
+                _input.jump = false;
+                _input.ultimate = false;
+                _input.protect = false;
+                _input.eskill = false;
+                _input.roll = false;
+                
+                // Only apply gravity and root motion
+                GroundedCheck();
+                JumpAndGravity();
+                Move();
+                
+                if (_hasAnimator && !_animator.applyRootMotion)
+                {
+                    ApplyRootMotionManually();
+                }
+                return;
+            }
+            else if (_isProtecting)
+            {
+                // Just exited Protect state — disable invincibility
+                _isProtecting = false;
+                PlayerHealth ph = GetComponent<PlayerHealth>();
+                if (ph != null) ph.SetInvincible(false);
+            }
+            
             JumpAndGravity();
             GroundedCheck();
             Move();

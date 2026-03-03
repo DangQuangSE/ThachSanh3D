@@ -28,6 +28,7 @@ public class PlayerHealth : MonoBehaviour
     
     private float currentHealth;
     private bool isDead = false;
+    private bool isInvincible = false;
     private Renderer[] renderers;
     private Color[] originalColors;
     private Vector3 spawnPosition;
@@ -61,6 +62,7 @@ public class PlayerHealth : MonoBehaviour
     public void TakeDamage(float damage)
     {
         if (isDead) return;
+        if (isInvincible) return;
         
         currentHealth -= damage;
         currentHealth = Mathf.Max(currentHealth, 0);
@@ -197,5 +199,15 @@ public class PlayerHealth : MonoBehaviour
     public bool IsDead()
     {
         return isDead;
+    }
+    
+    public void SetInvincible(bool value)
+    {
+        isInvincible = value;
+    }
+    
+    public bool IsInvincible()
+    {
+        return isInvincible;
     }
 }

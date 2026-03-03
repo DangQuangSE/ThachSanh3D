@@ -6,8 +6,8 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// Boss Đại Bàng - Animator HuuAnh: isWalking, Punch, Uppercut, JumpAttack, MagicAttack, MutantRoaring, Die.
-/// Gắn vào: GameObject Boss (finalv5) - cùng object có Animator + NavMeshAgent.
+/// Eagle Boss - Animator HuuAnh: isWalking, Punch, Uppercut, JumpAttack, MagicAttack, MutantRoaring, Die.
+/// Attach to: Boss GameObject (finalv5) - same object with Animator + NavMeshAgent.
 /// </summary>
 public class BossDaiBangController : MonoBehaviour
 {
@@ -25,13 +25,13 @@ public class BossDaiBangController : MonoBehaviour
     public float moveSpeed = 3.5f;
 
     [Header("Combat Settings")]
-    [Tooltip("Khoảng cách phát hiện player - bắt đầu đuổi")]
+    [Tooltip("Detection range - starts chasing player")]
     public float detectionRange = 15f;
-    [Tooltip("Khoảng cách đứng lại và đánh")]
+    [Tooltip("Range to stop and attack")]
     public float attackRange = 2.5f;
-    [Tooltip("Thời gian hồi giữa các đòn")]
+    [Tooltip("Cooldown between attacks")]
     public float attackCooldown = 2f;
-    [Tooltip("Đuổi xa tối đa, quá thì quay về")]
+    [Tooltip("Max chase distance, returns to spawn if exceeded")]
     public float maxChaseDistance = 30f;
 
     [Header("Attack Hitbox")]
@@ -40,15 +40,15 @@ public class BossDaiBangController : MonoBehaviour
     public LayerMask playerLayer;
 
     [Header("References")]
-    [Tooltip("Gắn: Player (object người chơi) từ Hierarchy")]
+    [Tooltip("Assign: Player object from Hierarchy")]
     public Transform target;
 
-    [Header("VFX - Spawn khi dùng skill (gắn prefab từ HuuAnh/VFX/Free Game VFX/Prefab)")]
-    [Tooltip("Quả cầu lửa (Magic Attack) – gắn điểm spawn (vd tay/staff)")]
+    [Header("VFX - Spawned on skill use (assign prefab from HuuAnh/VFX/Free Game VFX/Prefab)")]
+    [Tooltip("Fireball (Magic Attack) - assign spawn point (e.g. hand/staff)")]
     public Transform magicSpawnPoint;
-    [Tooltip("Điểm tham chiếu cho damage Roar (gần miệng boss). Để trống thì dùng Magic Spawn Point.")]
+    [Tooltip("Reference point for Roar damage (near boss mouth). Leave empty to use Magic Spawn Point.")]
     public Transform fireBreathSpawnPoint;
-    [Tooltip("Điểm spawn VFX cho Jump Attack (đặt ở chân boss, sát mặt đất). Để trống thì dùng transform.position.")]
+    [Tooltip("Spawn point for Jump Attack VFX (placed at boss feet, near ground). Leave empty to use transform.position.")]
     public Transform jumpAttackSpawnPoint;
     public GameObject fxGreenHit;
     public GameObject fxFireball;
@@ -58,16 +58,16 @@ public class BossDaiBangController : MonoBehaviour
     public Color damageColor = Color.red;
     public float damageFlashDuration = 0.1f;
 
-    [Header("Mutant Roaring (chiêu 6 – không có hiệu ứng lửa)")]
-    [Tooltip("Thời gian boss đứng yên Roar (giây). Hết thời gian này mới đánh đòn tiếp theo. Chỉnh cho khớp độ dài animation Roar.")]
+    [Header("Mutant Roaring (skill 6 - no fire VFX)")]
+    [Tooltip("Duration boss stands still during Roar (seconds). Next attack starts after this. Adjust to match Roar animation length.")]
     public float roarDuration = 2.2f;
-    [Tooltip("Sau khi dùng quả cầu lửa (Magic), đợi bao nhiêu giây rồi mới được dùng phun lửa (Roar). Tránh 2 chiêu lửa dùng cùng lúc.")]
+    [Tooltip("Delay after Fireball (Magic) before Roar can be used (seconds). Prevents two fire skills at once.")]
     public float magicToRoarDelay = 1.5f;
 
-    [Header("Player đánh trừ máu Boss")]
-    [Tooltip("Khoảng cách player đứng gần boss để đòn đánh tính trừ máu")]
+    [Header("Player Damage to Boss")]
+    [Tooltip("Range within which player attacks can damage boss")]
     public float playerHitRange = 3f;
-    [Tooltip("Damage mỗi đòn nếu không tìm thấy PlayerAttack trên player (mặc định 25)")]
+    [Tooltip("Damage per hit if PlayerAttack component not found on player (default 25)")]
     public float fallbackPlayerDamage = 25f;
 
     private BossState currentState = BossState.Idle;
@@ -90,7 +90,7 @@ public class BossDaiBangController : MonoBehaviour
     private static readonly int AnimIDMutantRoaring = Animator.StringToHash("MutantRoaring");
     private static readonly int AnimIDDie = Animator.StringToHash("Die");
 
-    /// <summary>Vòng chiêu: 0=Punch, 1=Punch, 2=Uppercut, 3=JumpAttack, 4=MagicAttack, 5=Mutant Roaring, rồi lặp.</summary>
+    /// <summary>Attack rotation: 0=Punch, 1=Punch, 2=Uppercut, 3=JumpAttack, 4=MagicAttack, 5=Mutant Roaring, then loops.</summary>
     private int _attackRotationIndex;
 
     private Collider[] _hitBuffer = new Collider[8];
@@ -103,7 +103,7 @@ public class BossDaiBangController : MonoBehaviour
     private bool _magicAttackSpawnedThisCast;
     private bool _roarDamageDoneThisCast;
     private int _lastDebugRoarStateHash;
-    private float _roarLockUntil = -1f;       // Trong khoảng này boss đứng yên, không xoay không đánh (đang Roar)
+    private float _roarLockUntil = -1f;       // During this period boss stands still, no rotation or attacks (Roaring)
     private static readonly string[] BossMeleeStates = { "Punch", "Uppercut", "JumpAttack" };
     private bool _playerFlashInProgress;
     private System.Collections.Generic.List<(Renderer r, int matIndex, string prop, Color original)> _playerNormalColorsCache;
@@ -420,7 +420,7 @@ public class BossDaiBangController : MonoBehaviour
 
             case BossState.Attack:
                 if (agent != null) agent.isStopped = true;
-                // Không reset _attackRotationIndex: giữ vòng chiêu để tới được chiêu 6 (Mutant Roaring) dù player ra vào attack range
+                // Do not reset _attackRotationIndex: preserve attack rotation to reach skill 6 (Mutant Roaring) even if player exits and re-enters attack range
                 break;
         }
     }
@@ -445,7 +445,7 @@ public class BossDaiBangController : MonoBehaviour
     {
         if (agent != null) agent.isStopped = true;
 
-        // Đang trong lúc phun lửa: đứng yên, không xoay, không đánh đòn tiếp theo
+        // Currently roaring: stand still, no rotation, no next attack
         if (Time.time < _roarLockUntil)
             return;
 
@@ -483,12 +483,12 @@ public class BossDaiBangController : MonoBehaviour
                 break;
             case 4:
                 animator.SetTrigger(AnimIDMagicAttack);
-                lastAttackTime = Time.time + magicToRoarDelay; // Quả cầu lửa xong, đợi magicToRoarDelay giây rồi mới tới phun lửa
+                lastAttackTime = Time.time + magicToRoarDelay; // After fireball, wait magicToRoarDelay seconds before Roar
                 break;
             case 5:
                 animator.SetTrigger(AnimIDMutantRoaring);
-                _roarLockUntil = Time.time + roarDuration;   // Đứng yên Roar xong rồi mới đánh tiếp
-                lastAttackTime = Time.time + roarDuration;  // Cooldown đòn tiếp theo = hết thời gian Roar
+                _roarLockUntil = Time.time + roarDuration;   // Stand still during Roar, then resume attacks
+                lastAttackTime = Time.time + roarDuration;  // Next attack cooldown = end of Roar duration
                 break;
             default:
                 animator.SetTrigger(AnimIDPunch);
@@ -559,10 +559,10 @@ public class BossDaiBangController : MonoBehaviour
     public void SpawnJumpAttackMagic()
     {
         if (fxWeaponEffect == null) return;
-        // Dùng jumpAttackSpawnPoint (chân boss, sát đất) thay vì magicSpawnPoint (tay/staff trên cao)
+        // Use jumpAttackSpawnPoint (boss feet, near ground) instead of magicSpawnPoint (hand/staff, high up)
         Transform point = jumpAttackSpawnPoint != null ? jumpAttackSpawnPoint : transform;
 
-        // Spawn hiệu ứng sạt lở tại vị trí boss tiếp đất (ground level)
+        // Spawn ground impact VFX at boss landing position (ground level)
         Vector3 spawnPos = point.position;
         Quaternion spawnRot = point.rotation;
         if (target != null)

@@ -2,44 +2,44 @@
 
 public class VfxController : MonoBehaviour
 {
-    [Header("VFX Prefabs - Keo tha Particle System vao day")]
-    [Tooltip("VFX cho don Punch")]
+    [Header("VFX Prefabs - Drag Particle System here")]
+    [Tooltip("VFX for Punch attack")]
     [SerializeField] private GameObject punchVfxPrefab;
-    [Tooltip("VFX cho don Swipe")]
+    [Tooltip("VFX for Swipe attack")]
     [SerializeField] private GameObject swipeVfxPrefab;
-    [Tooltip("VFX cho don Roar")]
+    [Tooltip("VFX for Roar attack")]
     [SerializeField] private GameObject roarVfxPrefab;
-    [Tooltip("VFX cho don Jump Attack")]
+    [Tooltip("VFX for Jump Attack")]
     [SerializeField] private GameObject jumpAttackVfxPrefab;
-    [Tooltip("VFX no dat khi Jump Attack ha canh")]
+    [Tooltip("Ground explosion VFX when Jump Attack lands")]
     [SerializeField] private GameObject jumpAttackGroundVfxPrefab;
 
-    [Header("Spawn Points - Keo bone tu Hierarchy vao day")]
-    [Tooltip("Tay phai (Punch + JumpAttack). Tim bone: Armature > Spine > RightArm > RightHand")]
+    [Header("Spawn Points - Drag bones from Hierarchy here")]
+    [Tooltip("Right hand (Punch + JumpAttack). Find bone: Armature > Spine > RightArm > RightHand")]
     [SerializeField] private Transform rightHandSpawnPoint;
-    [Tooltip("Tay trai (Swipe + JumpAttack). Tim bone: Armature > Spine > LeftArm > LeftHand")]
+    [Tooltip("Left hand (Swipe + JumpAttack). Find bone: Armature > Spine > LeftArm > LeftHand")]
     [SerializeField] private Transform leftHandSpawnPoint;
-    [Tooltip("Mieng (Roar). Tim bone: Armature > Spine > Neck > Head")]
+    [Tooltip("Mouth (Roar). Find bone: Armature > Spine > Neck > Head")]
     [SerializeField] private Transform mouthSpawnPoint;
-    [Tooltip("Chan boss (Ground VFX). De trong se dung transform.position")]
+    [Tooltip("Boss feet (Ground VFX). Leave empty to use transform.position")]
     [SerializeField] private Transform groundSpawnPoint;
 
-    // Luu instance VFX dang chay de tranh spawn trung
+    // Store running VFX instances to avoid duplicate spawns
     private GameObject currentVfxRight;
     private GameObject currentVfxLeft;
     private GameObject currentVfxMouth;
     private GameObject currentVfxGround;
 
     /// <summary>
-    /// Spawn VFX theo loai tan cong. Goi tu ChanTinhBossController hoac Animation Event.
-    /// 0 = Punch (tay phai), 1 = Swipe (tay trai), 2 = Roar (mieng), 3 = JumpAttack (hai tay)
+    /// Spawn VFX by attack type. Called from ChanTinhBossController or Animation Event.
+    /// 0 = Punch (right hand), 1 = Swipe (left hand), 2 = Roar (mouth), 3 = JumpAttack (both hands)
     /// </summary>
     public void PlayAttackVfx(int attackType)
     {
         GameObject prefab = GetVfxPrefab(attackType);
         if (prefab == null) return;
 
-        // JumpAttack: spawn VFX o CA HAI TAY
+        // JumpAttack: spawn VFX on BOTH HANDS
         if (attackType == 3)
         {
             SpawnVfxAtPoint(prefab, rightHandSpawnPoint, ref currentVfxRight);
@@ -53,7 +53,7 @@ public class VfxController : MonoBehaviour
     }
 
     /// <summary>
-    /// Huy tat ca VFX dang chay. Goi tu OnAttackComplete hoac khi can dung VFX.
+    /// Destroy all running VFX. Called from OnAttackComplete or when VFX needs to be stopped.
     /// </summary>
     public void StopAllVfx()
     {
@@ -64,36 +64,36 @@ public class VfxController : MonoBehaviour
     }
 
     /// <summary>
-    /// Spawn VFX no dat khi Jump Attack ha canh.
-    /// Goi tu Animation Event hoac ChanTinhBossController.OnJumpAttackLand().
-    /// VFX spawn tai world position (khong gan bone), tu destroy sau khi chay xong.
+    /// Spawn ground explosion VFX when Jump Attack lands.
+    /// Called from Animation Event or ChanTinhBossController.OnJumpAttackLand().
+    /// VFX spawns at world position (not attached to bone), auto-destroys after playing.
     /// </summary>
     public void PlayJumpAttackGroundVfx()
     {
         if (jumpAttackGroundVfxPrefab == null)
         {
-            Debug.LogWarning("VfxController: jumpAttackGroundVfxPrefab chua duoc gan!");
+            Debug.LogWarning("VfxController: jumpAttackGroundVfxPrefab is not assigned!");
             return;
         }
 
-        // Neu VFX ground dang chay -> khong spawn lai
+        // If ground VFX is already playing -> don't spawn again
         if (currentVfxGround != null) return;
 
-        // Lay vi tri spawn: groundSpawnPoint neu co, khong thi dung vi tri hien tai cua boss
+        // Get spawn position: use groundSpawnPoint if available, otherwise use current boss position
         Vector3 spawnPos = groundSpawnPoint != null ? groundSpawnPoint.position : transform.position;
-        // Dat VFX tren mat dat (y = spawnPos.y)
+        // Place VFX on the ground (y = spawnPos.y)
         currentVfxGround = Instantiate(jumpAttackGroundVfxPrefab, spawnPos, Quaternion.identity);
 
-        // Tat looping de VFX chi phat 1 lan
+        // Disable looping so VFX only plays once
         StopLooping(currentVfxGround);
 
-        // Tu destroy sau khi particle chay xong
+        // Auto-destroy after particle finishes playing
         float duration = GetParticleDuration(currentVfxGround);
         Destroy(currentVfxGround, duration);
     }
 
     /// <summary>
-    /// Spawn VFX tai vi tri tuy chinh (vi du: vi tri player).
+    /// Spawn VFX at a custom position (e.g. player position).
     /// </summary>
     public void PlayAttackVfxAtPosition(int attackType, Vector3 position)
     {
@@ -107,21 +107,21 @@ public class VfxController : MonoBehaviour
 
     private void SpawnVfxAtPoint(GameObject prefab, Transform spawnPoint, ref GameObject currentVfx)
     {
-        // Neu VFX dang chay -> KHONG spawn lai (tranh lap VFX khi animation chua het)
+        // If VFX is already playing -> DON'T spawn again (avoid duplicate VFX while animation is still running)
         if (currentVfx != null) return;
 
         Transform parent = spawnPoint != null ? spawnPoint : transform;
 
-        // Instantiate VFX lam con cua bone -> VFX bam theo tay khi animation chay
+        // Instantiate VFX as child of bone -> VFX follows hand during animation
         currentVfx = Instantiate(prefab, parent);
         currentVfx.transform.localPosition = Vector3.zero;
         currentVfx.transform.localRotation = Quaternion.identity;
 
-        // Tat looping de VFX chi phat 1 lan duy nhat, KHONG lap lai
+        // Disable looping so VFX plays only once, without repeating
         StopLooping(currentVfx);
 
-        // KHONG tu huy - VFX instance ton tai cho den khi OnAttackComplete() goi StopAllVfx()
-        // Dam bao VFX khong bi destroy truoc khi animation ket thuc
+        // DON'T auto-destroy - VFX instance lives until OnAttackComplete() calls StopAllVfx()
+        // Ensures VFX is not destroyed before the animation finishes
     }
 
     private void DestroyVfx(ref GameObject vfx)
@@ -134,7 +134,7 @@ public class VfxController : MonoBehaviour
     }
 
     /// <summary>
-    /// Tat looping tren tat ca ParticleSystem con de VFX chi chay 1 lan.
+    /// Disable looping on all child ParticleSystems so VFX plays only once.
     /// </summary>
     private void StopLooping(GameObject vfxInstance)
     {
@@ -147,8 +147,8 @@ public class VfxController : MonoBehaviour
     }
 
     /// <summary>
-    /// Lay thoi gian dai nhat cua tat ca ParticleSystem (duration + startLifetime).
-    /// Chi dung cho PlayAttackVfxAtPosition (VFX khong gan bone).
+    /// Get the longest duration of all ParticleSystems (duration + startLifetime).
+    /// Only used for PlayAttackVfxAtPosition (VFX not attached to bone).
     /// </summary>
     private float GetParticleDuration(GameObject vfxInstance)
     {
@@ -195,7 +195,7 @@ public class VfxController : MonoBehaviour
             case 2: return roarVfxPrefab;
             case 3: return jumpAttackVfxPrefab;
             default:
-                Debug.LogWarning($"VfxController: Khong tim thay VFX cho attackType {attackType}");
+                Debug.LogWarning($"VfxController: No VFX found for attackType {attackType}");
                 return null;
         }
     }

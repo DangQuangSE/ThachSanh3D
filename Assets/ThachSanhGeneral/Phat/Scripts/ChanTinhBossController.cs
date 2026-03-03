@@ -1,92 +1,92 @@
 using UnityEngine;
 using UnityEngine.AI;
-using System.Collections; // Thêm để dùng Coroutine
+using System.Collections; // Required for Coroutine
 
 public class ChanTinhBossController : MonoBehaviour
 {
     [Header("References")]
-    private NavMeshAgent agent; // NavMeshAgent để điều khiển di chuyển
-    private Animator animator; // Animator để điều khiển animation
-    private Transform player; // Tham chiếu đến vị trí của player
+    private NavMeshAgent agent; // NavMeshAgent for movement control
+    private Animator animator; // Animator for animation control
+    private Transform player; // Reference to the player's position
 
-    // ===== THÊM HEALTH SYSTEM =====
+    // ===== HEALTH SYSTEM =====
     [Header("Boss Stats")]
     [Tooltip("Full hp of boss")]
     [SerializeField] private float maxHealth = 1000f;
     private float currentHealth;
 
     [Header("Combat Settings")]
-    [SerializeField] private float attackRange = 2.5f; // Khoảng cách để bắt đầu tấn công
-    [SerializeField] private float detectionRange = 15f; // Khoảng cách để phát hiện player và bắt đầu theo đuổi
-    [SerializeField] private float walkSpeed = 2f; // Tốc độ đi bộ
-    [SerializeField] private float runSpeed = 5f; // Tốc độ chạy khi xa player
+    [SerializeField] private float attackRange = 2.5f; // Distance to start attacking
+    [SerializeField] private float detectionRange = 15f; // Distance to detect player and start chasing
+    [SerializeField] private float walkSpeed = 2f; // Walk speed
+    [SerializeField] private float runSpeed = 5f; // Run speed when far from player
 
-    //gay dame
+    // Deal damage
     [Header("Attack Damage Settings")]
-    [Tooltip("Sát thương mỗi đòn tấn công")]
+    [Tooltip("Damage per attack")]
     [SerializeField] private float attackDamage = 30f;
-    [Tooltip("Vị trí spawn attack hitbox")]
+    [Tooltip("Attack hitbox spawn position")]
     [SerializeField] private Transform attackPoint;
-    [Tooltip("Bán kính hitbox tấn công")]
+    [Tooltip("Attack hitbox radius")]
     [SerializeField] private float attackRadius = 1.5f;
-    [Tooltip("Layer của player")]
+    [Tooltip("Player layer")]
     [SerializeField] private LayerMask playerLayer;
 
-    // ===== THÊM VISUAL FEEDBACK hp =====
+    // ===== VISUAL FEEDBACK =====
     [Header("Visual Feedback")]
-    [Tooltip("Màu sắc khi nhận damage")]
+    [Tooltip("Color when taking damage")]
     [SerializeField] private Color damageColor = Color.red;
-    [Tooltip("Thời gian hiệu ứng damage")]
+    [Tooltip("Damage flash effect duration")]
     [SerializeField] private float damageFlashDuration = 0.1f;
 
     private Renderer[] renderers;
     private Color[] originalColors;
 
     [Header("VFX")]
-    [Tooltip("Kéo thả GameObject chứa VfxController vào đây")]
+    [Tooltip("Drag and drop the GameObject containing VfxController here")]
     [SerializeField] private VfxController vfxController;
 
     [Header("Attack Cooldowns")]
-    [SerializeField] private float roarCooldown = 10f; // Thời gian cooldown cho đòn gầm thét
+    [SerializeField] private float roarCooldown = 10f; // Cooldown time for roar attack
     [SerializeField] private float swipeCooldown = 3f;
     [SerializeField] private float punchCooldown = 2f;
     [SerializeField] private float jumpAttackCooldown = 8f;
 
-    private float lastAttackTime; // Thời gian lần cuối cùng thực hiện một đòn tấn công
-    private float currentCooldown; // Cooldown hiện tại của đòn tấn công đang thực hiện
-    private bool isAttacking = false; // Flag để kiểm tra xem boss đang trong trạng thái tấn công hay không
-    private bool isDead = false; // Flag để kiểm tra xem boss đã chết hay chưa
+    private float lastAttackTime; // Time of the last attack performed
+    private float currentCooldown; // Current cooldown of the ongoing attack
+    private bool isAttacking = false; // Flag to check if boss is currently attacking
+    private bool isDead = false; // Flag to check if boss is dead
 
     // Animation parameter hashes
-    private int speedHash; // Hash cho parameter "Speed" trong Animator
+    private int speedHash; // Hash for "Speed" parameter in Animator
     private int isDeadHash;
     private int isInCombatHash;
     private int roarHash;
     private int swipeHash;
     private int punchHash;
     private int jumpAttackHash;
-    private int hitHash; // Thêm animation Hit
+    private int hitHash; // Hit animation hash
 
     private enum BossState
     {
-        Idle, // Trạng thái đứng yên, không làm gì
-        Patrol, // Trạng thái đi tuần tra (nếu có)
-        Chase, // Trạng thái theo đuổi player khi phát hiện
-        Attack // Trạng thái tấn công khi ở gần player
+        Idle, // Standing still, doing nothing
+        Patrol, // Patrol state (if applicable)
+        Chase, // Chasing player when detected
+        Attack // Attacking when close to player
     }
     private BossState currentState = BossState.Idle;
 
     void Start()
     {
-        // ===== KHỞI TẠO HEALTH =====
+        // ===== INITIALIZE HEALTH =====
         currentHealth = maxHealth;
-        // Lay tham chieu den NavMeshAgent, Animator va player
+        // Get references to NavMeshAgent, Animator and player
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
         player = GameObject.FindGameObjectWithTag("Player").transform;
 
 
-        // ===== LẤY RENDERER ĐỂ LÀM DAMAGE FLASH =====
+        // ===== GET RENDERERS FOR DAMAGE FLASH =====
         renderers = GetComponentsInChildren<Renderer>();
         originalColors = new Color[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
@@ -105,17 +105,17 @@ public class ChanTinhBossController : MonoBehaviour
         swipeHash = Animator.StringToHash("Swipe");
         punchHash = Animator.StringToHash("Punch");
         jumpAttackHash = Animator.StringToHash("JumpAttack");
-        hitHash = Animator.StringToHash("Hit"); // Thêm
+        hitHash = Animator.StringToHash("Hit");
 
-        agent.updateRotation = true; // Cho phép NavMeshAgent tự động xoay theo hướng di chuyển
-        agent.updatePosition = true; // Cho phép NavMeshAgent tự động cập nhật vị trí của boss khi di chuyển
+        agent.updateRotation = true; // Allow NavMeshAgent to auto-rotate towards movement direction
+        agent.updatePosition = true; // Allow NavMeshAgent to auto-update boss position during movement
     }
 
     void Update()
     {
-        if (isDead) return; // Nếu boss đã chết, không thực hiện bất kỳ hành động nào
+        if (isDead) return; // If boss is dead, do nothing
 
-        // Tính khoảng cách đến player
+        // Calculate distance to player
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
         // State Machine
@@ -135,7 +135,7 @@ public class ChanTinhBossController : MonoBehaviour
         UpdateAnimator();
     }
 
-    // Thêm method này sau Update()
+    // State change handler
     private void ChangeState(BossState newState)
     {
         currentState = newState;
@@ -150,25 +150,25 @@ public class ChanTinhBossController : MonoBehaviour
 
             case BossState.Chase:
                 agent.isStopped = false;
-                agent.autoBraking = false; // Tắt auto braking để di chuyển mượt
+                agent.autoBraking = false; // Disable auto braking for smooth movement
                 animator.SetBool(isInCombatHash, true);
                 break;
 
             case BossState.Attack:
                 agent.isStopped = true;
-                agent.autoBraking = true; // Bật auto braking để dừng chính xác
+                agent.autoBraking = true; // Enable auto braking for precise stopping
                 break;
         }
     }
 
-    //xu ly trang thai Idle: dung yen, khong lam gi, nhung neu player vao trong detection range
-    //thi chuyen sang trang thai Chase
+    // Handle Idle state: stand still, do nothing, but if player enters detection range
+    // then switch to Chase state
     void HandleIdleState(float distanceToPlayer)
     {
-        agent.isStopped = true; //dung yen khi o trang thai Idle
-        animator.SetBool(isInCombatHash, false); //tat animation combat khi o trang thai Idle
+        agent.isStopped = true; // Stop when in Idle state
+        animator.SetBool(isInCombatHash, false); // Disable combat animation in Idle state
 
-        //kiem tra player co vao trong detection range hay khong
+        // Check if player is within detection range
         if (distanceToPlayer <= detectionRange)
         {
             //currentState = BossState.Chase;
@@ -177,11 +177,11 @@ public class ChanTinhBossController : MonoBehaviour
         }
     }
 
-    //xu ly trang thai Chase: theo duoi player, neu player ra khoi detection range thi chuyen ve Idle,
-    //neu player vao trong attack range thi chuyen sang trang thai Attack
+    // Handle Chase state: chase the player, if player leaves detection range switch to Idle,
+    // if player enters attack range switch to Attack state
     void HandleChaseState(float distanceToPlayer)
     {
-        //neu player ra khoi detection range thi chuyen ve Idle
+        // If player leaves detection range, switch to Idle
         if (distanceToPlayer > detectionRange)
         {
             //currentState = BossState.Idle;
@@ -189,20 +189,20 @@ public class ChanTinhBossController : MonoBehaviour
             return;
         }
 
-        agent.isStopped = false; //cho phep di chuyen
-        agent.SetDestination(player.position); //di chuyen den vi tri player
+        agent.isStopped = false; // Allow movement
+        agent.SetDestination(player.position); // Move towards player position
 
-        // dieu chinh toc do di chuyen: neu xa player thi chay, neu gan player thi di bo
+        // Adjust movement speed: run when far, walk when close
         if (distanceToPlayer > attackRange * 2)
         {
-            agent.speed = runSpeed; // Run khi xa
+            agent.speed = runSpeed; // Run when far
         }
         else
         {
-            agent.speed = walkSpeed; // Walk khi gan
+            agent.speed = walkSpeed; // Walk when close
         }
 
-        //kiem tra neu player vao trong attack range thi chuyen sang trang thai Attack
+        // Check if player is within attack range to switch to Attack state
         if (distanceToPlayer <= attackRange && !isAttacking)
         {
             //currentState = BossState.Attack;
@@ -212,28 +212,28 @@ public class ChanTinhBossController : MonoBehaviour
 
     void HandleAttackState(float distanceToPlayer)
     {
-        agent.isStopped = true; // Dung yen khi tan cong
+        agent.isStopped = true; // Stop when attacking
 
-        // Quay mat theo player
+        // Face the player
         Vector3 direction = (player.position - transform.position).normalized;
         Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
 
-        // Neu player ra khoi attack range thi chuyen ve Chase
+        // If player leaves attack range, switch to Chase
         if (distanceToPlayer > attackRange)
         {
             //currentState = BossState.Chase;
             ChangeState(BossState.Chase);
             return;
         }
-        // Neu dang khong tan cong va da het cooldown thi thuc hien mot dot tan cong ngau nhien
+        // If not attacking and cooldown has expired, perform a random attack
         if (!isAttacking && Time.time >= lastAttackTime + currentCooldown)
         {
             PerformRandomAttack();
         }
     }
 
-    // Thuc hien mot dot tan cong ngau nhien trong 4 dot tan cong co san
+    // Perform a random attack from the 4 available attack types
     void PerformRandomAttack()
     {
         isAttacking = true;
@@ -261,7 +261,7 @@ public class ChanTinhBossController : MonoBehaviour
                 break;
         }
 
-        // Spawn VFX cho đòn tấn công
+        // Spawn VFX for the attack
         if (vfxController != null)
         {
             vfxController.PlayAttackVfx(attackType);
@@ -277,15 +277,15 @@ public class ChanTinhBossController : MonoBehaviour
         animator.SetFloat(speedHash, speed);
     }
 
-    // ham nay se duoc goi tu animation event o cuoi moi dot tan cong
-    // de thong bao rang dot tan cong da ket thuc va boss co the chuyen sang trang thai khac
+    // This method is called from animation event at the end of each attack
+    // to notify that the attack has finished and the boss can transition to another state
     public void OnAttackComplete()
     {
         isAttacking = false;
         //currentState = BossState.Chase;
         ChangeState(BossState.Chase);
 
-        // Dừng VFX khi animation tấn công kết thúc
+        // Stop VFX when attack animation ends
         if (vfxController != null)
         {
             vfxController.StopAllVfx();
@@ -294,8 +294,8 @@ public class ChanTinhBossController : MonoBehaviour
         Debug.Log("Chan Tinh Boss attack animation completed");
     }
 
-    // Gọi từ Animation Event tại frame hạ cánh của Jump Attack
-    // để spawn VFX nổ đất
+    // Called from Animation Event at the landing frame of Jump Attack
+    // to spawn ground explosion VFX
     public void OnJumpAttackLand()
     {
         if (vfxController != null)
@@ -306,23 +306,23 @@ public class ChanTinhBossController : MonoBehaviour
         Debug.Log("Chan Tinh Boss Jump Attack landed - Ground VFX spawned!");
     }
 
-    // Method này sẽ được gọi từ Animation Event khi animation tấn công đến frame gây damage
+    // Called from Animation Event when the attack animation reaches the damage frame
     public void DealDamageToPlayer()
     {
-        // Nếu không có attackPoint thì dùng vị trí của boss
+        // If no attackPoint is set, use the boss position
         if (attackPoint == null)
         {
             attackPoint = transform;
         }
 
-        // Tìm tất cả collider trong bán kính attack
+        // Find all colliders within attack radius
         Collider[] hitColliders = Physics.OverlapSphere(attackPoint.position, attackRadius, playerLayer);
 
         foreach (Collider hitCollider in hitColliders)
         {
             Debug.Log("Chan Tinh Boss hit: " + hitCollider.name);
 
-            // Thử gây damage cho player
+            // Try to deal damage to player
             PlayerHealth playerHealth = hitCollider.GetComponent<PlayerHealth>();
             if (playerHealth != null && !playerHealth.IsDead())
             {
@@ -330,8 +330,8 @@ public class ChanTinhBossController : MonoBehaviour
                 Debug.Log($"Chan Tinh Boss dealt {attackDamage} damage to {hitCollider.name}!");
             }
 
-            // Có thể thêm các component khác nếu player có nhiều script health
-            // Ví dụ: ThirdPersonController health system
+            // Can add other components if the player has multiple health scripts
+            // Example: ThirdPersonController health system
         }
     }
 
@@ -344,10 +344,10 @@ public class ChanTinhBossController : MonoBehaviour
 
         Debug.Log("Chan Tinh Boss died!");
 
-        // Tắt collider để không nhận damage nữa
+        // Disable collider to stop receiving damage
         GetComponent<Collider>().enabled = false;
 
-        // Destroy sau 5 giây
+        // Destroy after 5 seconds
         Destroy(gameObject, 5f);
     }
 
@@ -356,7 +356,7 @@ public class ChanTinhBossController : MonoBehaviour
         return isDead;
     }
 
-    // ===== THÊM METHOD TAKEDAMAGE =====
+    // ===== TAKEDAMAGE METHOD =====
     public void TakeDamage(float damage)
     {
         if (isDead) return;
@@ -364,33 +364,33 @@ public class ChanTinhBossController : MonoBehaviour
         currentHealth -= damage;
         currentHealth = Mathf.Max(currentHealth, 0);
 
-        // Trigger animation Hit nếu có
+        // Trigger Hit animation if available
         if (animator != null)
         {
             animator.SetTrigger(hitHash);
         }
 
-        // Hiệu ứng flash màu đỏ
+        // Red flash effect
         StartCoroutine(DamageFlash());
 
         Debug.Log($"Chan Tinh Boss took {damage} damage. Health: {currentHealth}/{maxHealth}");
 
-        // Nếu đang Idle thì chuyển sang Chase
+        // If in Idle state, switch to Chase
         if (currentState == BossState.Idle)
         {
             ChangeState(BossState.Chase);
         }
 
-        // Kiểm tra chết
+        // Check if dead
         if (currentHealth <= 0)
         {
             Die();
         }
     }
-    // ===== HIỆU ỨNG FLASH MÀU ĐỎ KHI BỊ DAMAGE =====
+    // ===== RED FLASH EFFECT WHEN TAKING DAMAGE =====
     private IEnumerator DamageFlash()
     {
-        // Đổi màu sang đỏ
+        // Change color to red
         foreach (Renderer renderer in renderers)
         {
             if (renderer.material.HasProperty("_Color"))
@@ -401,7 +401,7 @@ public class ChanTinhBossController : MonoBehaviour
 
         yield return new WaitForSeconds(damageFlashDuration);
 
-        // Trả về màu gốc
+        // Restore original colors
         for (int i = 0; i < renderers.Length; i++)
         {
             if (renderers[i].material.HasProperty("_Color"))
@@ -411,15 +411,15 @@ public class ChanTinhBossController : MonoBehaviour
         }
     }
 
-    // ===== METHOD LẤY % HEALTH =====
+    // ===== GET HEALTH PERCENTAGE METHOD =====
     public float GetHealthPercentage()
     {
         return currentHealth / maxHealth;
     }
 
 
-    // hien thi vong tron detection range va attack range
-    // trong editor de de dang dieu chinh
+    // Display detection range and attack range circles
+    // in the editor for easy adjustment
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
@@ -428,7 +428,7 @@ public class ChanTinhBossController : MonoBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
 
-        // ===== THÊM MỚI: Hiển thị attack hitbox =====
+        // ===== Display attack hitbox =====
         if (attackPoint != null)
         {
             Gizmos.color = Color.magenta;

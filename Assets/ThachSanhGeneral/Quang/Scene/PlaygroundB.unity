@@ -927,6 +927,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: ThachSachDemo
       objectReference: {fileID: 0}
+    - target: {fileID: 4837325654816077065, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4996800784693884470, guid: c2d8a27406f06cd4eaadcbc4554a34a4, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2618,7 +2626,19 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4416926081852918490, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
+      propertyPath: ESkillEnabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4416926081852918490, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
       propertyPath: ESkillCooldown
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4416926081852918490, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
+      propertyPath: UltimateDamage
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 4416926081852918490, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
+      propertyPath: UltimateEnabled
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4416926081852918490, guid: 64dce48905ffd9b4293e595fa6941544, type: 3}
@@ -2902,6 +2922,7 @@ MonoBehaviour:
   ultimateVFX: {fileID: 1205478487176026167, guid: 46569109513c536439077959e61625f1, type: 3}
   protectVFX: {fileID: 1289543790355709915, guid: 25aeb6a692de5e9448da9b8655cc6e3a, type: 3}
   eskillVFX: {fileID: 856368647163548680, guid: 421bf6827c0a38e4ea49ae41f78f979a, type: 3}
+  ultimateBossImpactVFX: {fileID: 584207449403360073, guid: f3657402f886cd3468c4f9c01b5e80ff, type: 3}
   vfxSpawnPoint: {fileID: 691251139}
   spawnOffset: {x: 0, y: 0, z: 0}
   vfxScale: 1
@@ -2916,6 +2937,10 @@ MonoBehaviour:
   ultimateRotationOffset: {x: 0, y: 0, z: 0}
   protectRotationOffset: {x: 0, y: 0, z: 0}
   eskillRotationOffset: {x: 0, y: 0, z: 0}
+  ultimateBossImpactOffset: {x: 0, y: 0.1, z: 0}
+  ultimateBossImpactScale: 1
+  ultimateBossImpactLifetime: 3
+  ultimateBossImpactSpawnTime: 0.5
   autoPlayParticleSystems: 1
   useWeaponRotation: 1
   attack1SpawnTime: 0.4

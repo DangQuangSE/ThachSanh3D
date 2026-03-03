@@ -54,6 +54,7 @@ public class BossController : MonoBehaviour
     private Animator animator;
     private float lastAttackTime;
     private bool isDead = false;
+    private bool isStunned = false;
     private Renderer[] renderers;
     private Color[] originalColors;
     private bool hasAnimator;
@@ -103,7 +104,7 @@ public class BossController : MonoBehaviour
 
     void Update()
     {
-        if (isDead) return;
+        if (isDead || isStunned) return;
         
         UpdateStateMachine();
         UpdateAnimator();
@@ -269,7 +270,8 @@ public class BossController : MonoBehaviour
         currentHealth -= damage;
         currentHealth = Mathf.Max(currentHealth, 0);
         
-        if (hasAnimator)
+        // Only play hit animation if not stunned (stun already shows hit)
+        if (hasAnimator && !isStunned)
         {
             animator.SetTrigger(animIDHit);
         }
@@ -278,7 +280,7 @@ public class BossController : MonoBehaviour
         
         Debug.Log($"Boss took {damage} damage. Health: {currentHealth}/{maxHealth}");
         
-        if (currentState == BossState.Idle)
+        if (currentState == BossState.Idle && !isStunned)
         {
             ChangeState(BossState.Chase);
         }
@@ -313,6 +315,7 @@ public class BossController : MonoBehaviour
     private void Die()
     {
         isDead = true;
+        isStunned = false;
         currentState = BossState.Death;
         
         if (agent != null)
@@ -331,6 +334,49 @@ public class BossController : MonoBehaviour
         GetComponent<Collider>().enabled = false;
         
         Destroy(gameObject, 5f);
+    }
+
+    /// <summary>
+    /// Stun the boss for a duration - stops all actions and plays hit animation
+    /// </summary>
+    public void Stun(float duration)
+    {
+        if (isDead) return;
+        StopCoroutine(nameof(StunCoroutine));
+        StartCoroutine(StunCoroutine(duration));
+    }
+
+    private IEnumerator StunCoroutine(float duration)
+    {
+        isStunned = true;
+
+        // Stop boss
+        if (agent != null)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+        }
+
+        // Play hit animation to indicate stun
+        if (hasAnimator)
+        {
+            animator.SetTrigger(animIDHit);
+            animator.SetFloat(animIDSpeed, 0f);
+        }
+
+        currentState = BossState.Idle;
+
+        Debug.Log($"Boss stunned for {duration}s!");
+
+        yield return new WaitForSeconds(duration);
+
+        // Resume boss if not actually dead
+        if (!isDead && currentHealth > 0)
+        {
+            isStunned = false;
+            ChangeState(BossState.Chase);
+            Debug.Log("Boss recovered from stun!");
+        }
     }
 
     private void UpdateAnimator()
@@ -355,6 +401,11 @@ public class BossController : MonoBehaviour
     public bool IsDead()
     {
         return isDead;
+    }
+
+    public bool IsStunned()
+    {
+        return isStunned;
     }
 
     public BossState GetCurrentState()

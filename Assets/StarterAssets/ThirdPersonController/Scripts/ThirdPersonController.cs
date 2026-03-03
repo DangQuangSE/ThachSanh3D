@@ -73,11 +73,24 @@ namespace StarterAssets
         [Tooltip("Enable/disable ultimate skill")]
         public bool UltimateEnabled = true;
 
+        [Tooltip("Damage dealt by ultimate skill")]
+        public float UltimateDamage = 100f;
+
+        [Tooltip("Stun duration applied to boss by ultimate (seconds)")]
+        public float UltimateStunDuration = 5f;
+
         [Header("E Skill (Attack360)")]
         [Tooltip("Cooldown time for E skill in seconds")]
         public float ESkillCooldown = 8.0f;
         [Tooltip("Enable/disable E skill")]
         public bool ESkillEnabled = true;
+
+        [Header("Roll")]
+        [Tooltip("Cooldown time for roll in seconds")]
+        public float RollCooldown = 1.0f;
+
+        [Tooltip("Enable/disable roll")]
+        public bool RollEnabled = true;
 
         [Header("Combat Targeting")]
         [Tooltip("Automatically face the nearest enemy when attacking or using skills")]
@@ -139,6 +152,11 @@ namespace StarterAssets
         private bool _isESkillReady = true;
         private bool _isPerformingESkill = false;
 
+        // roll
+        private float _rollCooldownTimer = 0f;
+        private bool _isRollReady = true;
+        private bool _isPerformingRoll = false;
+
         // animation IDs
         private int _animIDSpeed;
         private int _animIDGrounded;
@@ -151,6 +169,7 @@ namespace StarterAssets
         private int _animIDUltimate;
         private int _animIDProtect;
         private int _animIDESkill;
+        private int _animIDRoll;
 
         private Transform _combatTarget;
 
@@ -212,6 +231,51 @@ namespace StarterAssets
         {
             _hasAnimator = TryGetComponent(out _animator);
             FindCombatTarget();
+            
+            // Check if currently in Protect state (Skill Q)
+            bool isInProtectState = false;
+            if (_hasAnimator)
+            {
+                AnimatorStateInfo st = _animator.GetCurrentAnimatorStateInfo(0);
+                isInProtectState = st.IsName("ProtectAxe");
+            }
+            
+            // During Protect: invincible + block all other input
+            if (isInProtectState)
+            {
+                _isProtecting = true;
+                
+                // Enable invincibility
+                PlayerHealth ph = GetComponent<PlayerHealth>();
+                if (ph != null) ph.SetInvincible(true);
+                
+                // Consume and discard all inputs
+                _input.attack = false;
+                _input.jump = false;
+                _input.ultimate = false;
+                _input.protect = false;
+                _input.eskill = false;
+                _input.roll = false;
+                
+                // Only apply gravity and root motion
+                GroundedCheck();
+                JumpAndGravity();
+                Move();
+                
+                if (_hasAnimator && !_animator.applyRootMotion)
+                {
+                    ApplyRootMotionManually();
+                }
+                return;
+            }
+            else if (_isProtecting)
+            {
+                // Just exited Protect state — disable invincibility
+                _isProtecting = false;
+                PlayerHealth ph = GetComponent<PlayerHealth>();
+                if (ph != null) ph.SetInvincible(false);
+            }
+            
             JumpAndGravity();
             GroundedCheck();
             Move();
@@ -219,6 +283,7 @@ namespace StarterAssets
             HandleUltimate();
             HandleProtect();
             HandleESkill();
+            HandleRoll();
             FaceTargetDuringCombat();
             
             // Manual root motion handling when "Apply Root Motion = Handled by Script"
@@ -246,6 +311,7 @@ namespace StarterAssets
             _animIDUltimate = Animator.StringToHash("Ultimate");
             _animIDProtect = Animator.StringToHash("Protect");
             _animIDESkill = Animator.StringToHash("ESkill");
+            _animIDRoll = Animator.StringToHash("Roll");
         }
 
         private void GroundedCheck()
@@ -291,6 +357,7 @@ namespace StarterAssets
             bool isInUltimateState = false;
             bool isInProtectState = false;
             bool isInESkillState = false;
+            bool isInRollState = false;
             if (_hasAnimator)
             {
                 AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
@@ -300,10 +367,11 @@ namespace StarterAssets
                 isInUltimateState = currentState.IsName("UntimateAttack_1");
                 isInProtectState = currentState.IsName("ProtectAxe");
                 isInESkillState = currentState.IsName("Attack360");
+                isInRollState = currentState.IsName("Roll");
             }
             
             // Don't allow HORIZONTAL movement during attack, ultimate, protect or eskill, but ALLOW vertical (gravity)
-            if (isInAttackState || isInUltimateState || isInProtectState || isInESkillState)
+            if (isInAttackState || isInUltimateState || isInProtectState || isInESkillState || isInRollState)
             {
                 // Apply ONLY vertical movement (gravity)
                 Vector3 verticalMove = new Vector3(0.0f, _verticalVelocity, 0.0f);
@@ -774,6 +842,98 @@ namespace StarterAssets
             }
         }
 
+        private void HandleRoll()
+        {
+            // Update cooldown timer
+            if (!_isRollReady && _rollCooldownTimer > 0)
+            {
+                _rollCooldownTimer -= Time.deltaTime;
+                if (_rollCooldownTimer <= 0)
+                {
+                    _isRollReady = true;
+                    Debug.Log("Roll is ready!");
+                }
+            }
+
+            // Check if currently performing roll
+            bool isInRollState = false;
+            if (_hasAnimator)
+            {
+                AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+                isInRollState = currentState.IsName("Roll");
+                
+                if (isInRollState)
+                {
+                    _isPerformingRoll = true;
+                }
+                else if (_isPerformingRoll)
+                {
+                    _isPerformingRoll = false;
+                }
+            }
+
+            // Handle roll input
+            if (_input.roll)
+            {
+                _input.roll = false;
+
+                if (!RollEnabled)
+                {
+                    Debug.LogWarning("Roll is disabled!");
+                    return;
+                }
+
+                if (!_isRollReady)
+                {
+                    Debug.Log($"Roll on cooldown! {_rollCooldownTimer:F1}s remaining");
+                    return;
+                }
+
+                if (!Grounded)
+                {
+                    Debug.Log("Cannot roll in air!");
+                    return;
+                }
+
+                if (_isPerformingRoll || isInRollState)
+                {
+                    Debug.Log("Already performing roll!");
+                    return;
+                }
+
+                // Start roll
+                if (_hasAnimator)
+                {
+                    // Auto-aim toward nearest enemy before rolling
+                    if (AutoAimOnCombat && _combatTarget != null)
+                        SnapFaceTarget(_combatTarget.position);
+
+                    // Reset attack combo
+                    _attackCount = 0;
+                    _attackQueued = false;
+                    _lastProcessedAttackCount = 0;
+                    _attackCooldownTimer = 0f;
+
+                    // Clear all triggers
+                    _animator.ResetTrigger(_animIDAttack1);
+                    _animator.ResetTrigger(_animIDAttack2);
+                    _animator.ResetTrigger(_animIDAttack3);
+                    _animator.ResetTrigger(_animIDUltimate);
+                    _animator.ResetTrigger(_animIDProtect);
+                    _animator.ResetTrigger(_animIDESkill);
+                    
+                    // Trigger roll animation
+                    _animator.SetTrigger("Roll");
+                    
+                    _isRollReady = false;
+                    _rollCooldownTimer = RollCooldown;
+                    _isPerformingRoll = true;
+
+                    Debug.Log("Roll activated!");
+                }
+            }
+        }
+
         private void OnAnimatorMove()
         {
             if (_hasAnimator && _controller != null)
@@ -783,6 +943,7 @@ namespace StarterAssets
                                      currentState.IsName("Attack_2") || 
                                      currentState.IsName("Attack_3");
                 bool isInUltimateState = currentState.IsName("UntimateAttack_1");
+                bool isInRollState = currentState.IsName("Roll");
 
                 if (isInAttackState)
                 {
@@ -807,6 +968,12 @@ namespace StarterAssets
                         _controller.Move(horizontalMotion);
                     }
                 }
+                else if (isInRollState)
+                {
+                    Vector3 rootMotionDelta = _animator.deltaPosition;
+                    Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                    _controller.Move(horizontalMotion);
+                }
             }
         }
 
@@ -820,6 +987,7 @@ namespace StarterAssets
                                  currentState.IsName("Attack_3");
             bool isInUltimateState = currentState.IsName("UntimateAttack_1");
             bool isInESkillState = currentState.IsName("Attack360");
+            bool isInRollState = currentState.IsName("Roll");
 
             if (isInAttackState)
             {
@@ -845,6 +1013,12 @@ namespace StarterAssets
                 }
             }
             else if (isInESkillState)
+            {
+                Vector3 rootMotionDelta = _animator.deltaPosition;
+                Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
+                _controller.Move(horizontalMotion);
+            }
+            else if (isInRollState)
             {
                 Vector3 rootMotionDelta = _animator.deltaPosition;
                 Vector3 horizontalMotion = new Vector3(rootMotionDelta.x, 0f, rootMotionDelta.z);
@@ -962,6 +1136,23 @@ namespace StarterAssets
             }
         }
 
+        private void OnUltimateHit(AnimationEvent animationEvent)
+        {
+            // Called by AnimationEvent on ultimate animation
+            // Deal damage and stun boss (VFX is handled by AttackVFXManager)
+            if (_combatTarget != null)
+            {
+                BossController boss = _combatTarget.GetComponent<BossController>();
+                if (boss != null && !boss.IsDead())
+                {
+                    boss.TakeDamage(UltimateDamage);
+                    Debug.Log($"Ultimate hit boss for {UltimateDamage} damage!");
+
+                    boss.Stun(UltimateStunDuration);
+                    Debug.Log($"Boss stunned for {UltimateStunDuration}s!");
+                }
+            }
+        }
         // Public methods for UI/External access
         public float GetUltimateCooldownProgress()
         {
@@ -995,6 +1186,22 @@ namespace StarterAssets
             return _eskillCooldownTimer;
         }
 
+        public float GetRollCooldownProgress()
+        {
+            if (_isRollReady) return 1f;
+            return 1f - (_rollCooldownTimer / RollCooldown);
+        }
+
+        public bool IsRollReady()
+        {
+            return _isRollReady;
+        }
+
+        public float GetRollRemainingCooldown()
+        {
+            return _rollCooldownTimer;
+        }
+
         private void FindCombatTarget()
         {
             if (!AutoAimOnCombat) return;
@@ -1023,7 +1230,7 @@ namespace StarterAssets
             if (!AutoAimOnCombat || _combatTarget == null || !_hasAnimator) return;
             AnimatorStateInfo st = _animator.GetCurrentAnimatorStateInfo(0);
             bool inCombat = st.IsName("Attack_1") || st.IsName("Attack_2") || st.IsName("Attack_3")
-                         || st.IsName("UntimateAttack_1") || st.IsName("Attack360");
+                         || st.IsName("UntimateAttack_1") || st.IsName("UntimateAttack") || st.IsName("Attack360");
             if (!inCombat) return;
             Vector3 dir = _combatTarget.position - transform.position;
             dir.y = 0f;

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class PlayerHealth : MonoBehaviour
@@ -27,16 +28,22 @@ public class PlayerHealth : MonoBehaviour
     
     private float currentHealth;
     private bool isDead = false;
+    private bool isInvincible = false;
     private Renderer[] renderers;
     private Color[] originalColors;
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
+    private Animator _animator;
+    
+    // Must match the Bool parameter name in Animator exactly
+    private static readonly int AnimIDDead = Animator.StringToHash("Dead");
     
     void Start()
     {
         currentHealth = maxHealth;
         spawnPosition = transform.position;
         spawnRotation = transform.rotation;
+        _animator = GetComponent<Animator>();
         
         // Get all renderers for damage flash effect
         renderers = GetComponentsInChildren<Renderer>();
@@ -55,6 +62,7 @@ public class PlayerHealth : MonoBehaviour
     public void TakeDamage(float damage)
     {
         if (isDead) return;
+        if (isInvincible) return;
         
         currentHealth -= damage;
         currentHealth = Mathf.Max(currentHealth, 0);
@@ -116,59 +124,47 @@ public class PlayerHealth : MonoBehaviour
         isDead = true;
         Debug.Log("Player died!");
         
-        // Disable movement
+        // Stop damage flash coroutine if running
+        StopAllCoroutines();
+        
+        // 1. Disable player input/movement first
         var controller = GetComponent<StarterAssets.ThirdPersonController>();
         if (controller != null)
         {
             controller.enabled = false;
         }
         
-        // Disable character controller
+        // 2. Play death animation — use Play() to force immediate state change
+        //    This bypasses any transition conflicts from lingering attack triggers
+        if (_animator != null)
+        {
+            _animator.ResetTrigger("Attack1");
+            _animator.ResetTrigger("Attack2");
+            _animator.ResetTrigger("Attack3");
+            _animator.ResetTrigger("Ultimate");
+            _animator.ResetTrigger("Protect");
+            _animator.ResetTrigger("ESkill");
+            _animator.ResetTrigger("Roll");
+            
+            _animator.SetBool(AnimIDDead, true);
+            _animator.Play("Dead", 0, 0f);
+        }
+        
+        // 3. Disable CharacterController last (after animation is set)
         var charController = GetComponent<CharacterController>();
         if (charController != null)
         {
             charController.enabled = false;
         }
         
-        // Play death animation if available
-        var animator = GetComponent<Animator>();
-        if (animator != null)
-        {
-            // Assuming you have a "Death" trigger parameter
-            animator.SetTrigger("Death");
-        }
-        
-        // Respawn after delay
-        Invoke(nameof(Respawn), respawnDelay);
+        // Restart game after delay
+        Invoke(nameof(RestartGame), respawnDelay);
     }
     
-    private void Respawn()
+    private void RestartGame()
     {
-        // Reset health
-        currentHealth = maxHealth;
-        isDead = false;
-        
-        // Reset position
-        transform.position = spawnPosition;
-        transform.rotation = spawnRotation;
-        
-        // Re-enable components
-        var controller = GetComponent<StarterAssets.ThirdPersonController>();
-        if (controller != null)
-        {
-            controller.enabled = true;
-        }
-        
-        var charController = GetComponent<CharacterController>();
-        if (charController != null)
-        {
-            charController.enabled = true;
-        }
-        
-        // Update UI
-        UpdateHealthUI();
-        
-        Debug.Log("Player respawned!");
+        Debug.Log("Restarting game...");
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
     
     private void UpdateHealthUI()
@@ -203,5 +199,15 @@ public class PlayerHealth : MonoBehaviour
     public bool IsDead()
     {
         return isDead;
+    }
+    
+    public void SetInvincible(bool value)
+    {
+        isInvincible = value;
+    }
+    
+    public bool IsInvincible()
+    {
+        return isInvincible;
     }
 }

@@ -294,6 +294,18 @@ public class ChanTinhBossController : MonoBehaviour
         Debug.Log("Chan Tinh Boss attack animation completed");
     }
 
+    // Gọi từ Animation Event tại frame hạ cánh của Jump Attack
+    // để spawn VFX nổ đất
+    public void OnJumpAttackLand()
+    {
+        if (vfxController != null)
+        {
+            vfxController.PlayJumpAttackGroundVfx();
+        }
+
+        Debug.Log("Chan Tinh Boss Jump Attack landed - Ground VFX spawned!");
+    }
+
     // Method này sẽ được gọi từ Animation Event khi animation tấn công đến frame gây damage
     public void DealDamageToPlayer()
     {

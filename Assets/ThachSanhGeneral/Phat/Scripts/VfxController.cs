@@ -11,6 +11,8 @@ public class VfxController : MonoBehaviour
     [SerializeField] private GameObject roarVfxPrefab;
     [Tooltip("VFX cho don Jump Attack")]
     [SerializeField] private GameObject jumpAttackVfxPrefab;
+    [Tooltip("VFX no dat khi Jump Attack ha canh")]
+    [SerializeField] private GameObject jumpAttackGroundVfxPrefab;
 
     [Header("Spawn Points - Keo bone tu Hierarchy vao day")]
     [Tooltip("Tay phai (Punch + JumpAttack). Tim bone: Armature > Spine > RightArm > RightHand")]
@@ -19,11 +21,14 @@ public class VfxController : MonoBehaviour
     [SerializeField] private Transform leftHandSpawnPoint;
     [Tooltip("Mieng (Roar). Tim bone: Armature > Spine > Neck > Head")]
     [SerializeField] private Transform mouthSpawnPoint;
+    [Tooltip("Chan boss (Ground VFX). De trong se dung transform.position")]
+    [SerializeField] private Transform groundSpawnPoint;
 
     // Luu instance VFX dang chay de tranh spawn trung
     private GameObject currentVfxRight;
     private GameObject currentVfxLeft;
     private GameObject currentVfxMouth;
+    private GameObject currentVfxGround;
 
     /// <summary>
     /// Spawn VFX theo loai tan cong. Goi tu ChanTinhBossController hoac Animation Event.
@@ -55,6 +60,36 @@ public class VfxController : MonoBehaviour
         DestroyVfx(ref currentVfxRight);
         DestroyVfx(ref currentVfxLeft);
         DestroyVfx(ref currentVfxMouth);
+        DestroyVfx(ref currentVfxGround);
+    }
+
+    /// <summary>
+    /// Spawn VFX no dat khi Jump Attack ha canh.
+    /// Goi tu Animation Event hoac ChanTinhBossController.OnJumpAttackLand().
+    /// VFX spawn tai world position (khong gan bone), tu destroy sau khi chay xong.
+    /// </summary>
+    public void PlayJumpAttackGroundVfx()
+    {
+        if (jumpAttackGroundVfxPrefab == null)
+        {
+            Debug.LogWarning("VfxController: jumpAttackGroundVfxPrefab chua duoc gan!");
+            return;
+        }
+
+        // Neu VFX ground dang chay -> khong spawn lai
+        if (currentVfxGround != null) return;
+
+        // Lay vi tri spawn: groundSpawnPoint neu co, khong thi dung vi tri hien tai cua boss
+        Vector3 spawnPos = groundSpawnPoint != null ? groundSpawnPoint.position : transform.position;
+        // Dat VFX tren mat dat (y = spawnPos.y)
+        currentVfxGround = Instantiate(jumpAttackGroundVfxPrefab, spawnPos, Quaternion.identity);
+
+        // Tat looping de VFX chi phat 1 lan
+        StopLooping(currentVfxGround);
+
+        // Tu destroy sau khi particle chay xong
+        float duration = GetParticleDuration(currentVfxGround);
+        Destroy(currentVfxGround, duration);
     }
 
     /// <summary>

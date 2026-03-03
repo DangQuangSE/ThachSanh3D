@@ -48,6 +48,8 @@ public class BossDaiBangController : MonoBehaviour
     public Transform magicSpawnPoint;
     [Tooltip("Điểm tham chiếu cho damage Roar (gần miệng boss). Để trống thì dùng Magic Spawn Point.")]
     public Transform fireBreathSpawnPoint;
+    [Tooltip("Điểm spawn VFX cho Jump Attack (đặt ở chân boss, sát mặt đất). Để trống thì dùng transform.position.")]
+    public Transform jumpAttackSpawnPoint;
     public GameObject fxGreenHit;
     public GameObject fxFireball;
     public GameObject fxWeaponEffect;
@@ -557,22 +559,18 @@ public class BossDaiBangController : MonoBehaviour
     public void SpawnJumpAttackMagic()
     {
         if (fxWeaponEffect == null) return;
-        Transform point = magicSpawnPoint != null ? magicSpawnPoint : transform;
+        // Dùng jumpAttackSpawnPoint (chân boss, sát đất) thay vì magicSpawnPoint (tay/staff trên cao)
+        Transform point = jumpAttackSpawnPoint != null ? jumpAttackSpawnPoint : transform;
 
-        // Với Jump Attack: spawn hiệu ứng tại vị trí player (trên mặt đất) thay vì rơi ở chỗ boss
-        Vector3 spawnPos;
-        Quaternion spawnRot;
+        // Spawn hiệu ứng sạt lở tại vị trí boss tiếp đất (ground level)
+        Vector3 spawnPos = point.position;
+        Quaternion spawnRot = point.rotation;
         if (target != null)
         {
             Vector3 toTarget = target.position - point.position;
             toTarget.y = 0f;
-            spawnPos = new Vector3(target.position.x, point.position.y, target.position.z);
-            spawnRot = toTarget != Vector3.zero ? Quaternion.LookRotation(toTarget) : point.rotation;
-        }
-        else
-        {
-            spawnPos = point.position;
-            spawnRot = point.rotation;
+            if (toTarget != Vector3.zero)
+                spawnRot = Quaternion.LookRotation(toTarget);
         }
 
         GameObject vfx = Instantiate(fxWeaponEffect, spawnPos, spawnRot);

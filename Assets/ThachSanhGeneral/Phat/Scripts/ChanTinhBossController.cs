@@ -11,7 +11,7 @@ public class ChanTinhBossController : MonoBehaviour
 
     // ===== THÊM HEALTH SYSTEM =====
     [Header("Boss Stats")]
-    [Tooltip("Máu tối đa của boss")]
+    [Tooltip("Full hp of boss")]
     [SerializeField] private float maxHealth = 1000f;
     private float currentHealth;
 
@@ -41,6 +41,10 @@ public class ChanTinhBossController : MonoBehaviour
 
     private Renderer[] renderers;
     private Color[] originalColors;
+
+    [Header("VFX")]
+    [Tooltip("Kéo thả GameObject chứa VfxController vào đây")]
+    [SerializeField] private VfxController vfxController;
 
     [Header("Attack Cooldowns")]
     [SerializeField] private float roarCooldown = 10f; // Thời gian cooldown cho đòn gầm thét
@@ -257,6 +261,12 @@ public class ChanTinhBossController : MonoBehaviour
                 break;
         }
 
+        // Spawn VFX cho đòn tấn công
+        if (vfxController != null)
+        {
+            vfxController.PlayAttackVfx(attackType);
+        }
+
         lastAttackTime = Time.time;
     }
 
@@ -274,6 +284,13 @@ public class ChanTinhBossController : MonoBehaviour
         isAttacking = false;
         //currentState = BossState.Chase;
         ChangeState(BossState.Chase);
+
+        // Dừng VFX khi animation tấn công kết thúc
+        if (vfxController != null)
+        {
+            vfxController.StopAllVfx();
+        }
+
         Debug.Log("Chan Tinh Boss attack animation completed");
     }
 

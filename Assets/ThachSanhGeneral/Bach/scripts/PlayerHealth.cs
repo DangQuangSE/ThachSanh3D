@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class PlayerHealth : MonoBehaviour
@@ -154,44 +155,14 @@ public class PlayerHealth : MonoBehaviour
             charController.enabled = false;
         }
         
-        // Respawn after delay
-        Invoke(nameof(Respawn), respawnDelay);
+        // Restart game after delay
+        Invoke(nameof(RestartGame), respawnDelay);
     }
     
-    private void Respawn()
+    private void RestartGame()
     {
-        // 1. Re-enable CharacterController first (required before changing position)
-        var charController = GetComponent<CharacterController>();
-        if (charController != null)
-        {
-            charController.enabled = true;
-        }
-        
-        // 2. Reset position
-        transform.position = spawnPosition;
-        transform.rotation = spawnRotation;
-        
-        // 3. Reset health
-        currentHealth = maxHealth;
-        isDead = false;
-        
-        // 4. Exit Dead state — set Dead=false so Dead?Exit transition fires
-        if (_animator != null)
-        {
-            _animator.SetBool(AnimIDDead, false);
-        }
-        
-        // 5. Re-enable movement controller
-        var controller = GetComponent<StarterAssets.ThirdPersonController>();
-        if (controller != null)
-        {
-            controller.enabled = true;
-        }
-        
-        // Update UI
-        UpdateHealthUI();
-        
-        Debug.Log("Player respawned!");
+        Debug.Log("Restarting game...");
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
     
     private void UpdateHealthUI()

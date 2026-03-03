@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Script debug và test BossDaiBangController. Gắn vào cùng GameObject Boss (finalv5) hoặc con.
+/// Debug and test script for BossDaiBangController. Attach to same Boss GameObject (finalv5) or its child.
 /// </summary>
 public class BossDaiBangDebugger : MonoBehaviour
 {
@@ -31,7 +31,7 @@ public class BossDaiBangDebugger : MonoBehaviour
 
         if (boss == null)
         {
-            Debug.LogError("BossDaiBangDebugger: Không tìm thấy BossDaiBangController!");
+            Debug.LogError("BossDaiBangDebugger: BossDaiBangController not found!");
             enabled = false;
             return;
         }
@@ -111,13 +111,13 @@ public class BossDaiBangDebugger : MonoBehaviour
         if (Input.GetKeyDown(damageKey))
         {
             boss.TakeDamage(testDamage);
-            Debug.Log($"[TEST] Boss nhận {testDamage} damage!");
+            Debug.Log($"[TEST] Boss took {testDamage} damage!");
         }
 
         if (Input.GetKeyDown(killKey))
         {
             boss.TakeDamage(9999);
-            Debug.Log("[TEST] Boss bị kill!");
+            Debug.Log("[TEST] Boss killed!");
         }
 
         if (Input.GetKeyDown(healKey))
@@ -127,7 +127,7 @@ public class BossDaiBangDebugger : MonoBehaviour
             float healAmount = maxHealth - currentHealth;
 
             boss.TakeDamage(-healAmount);
-            Debug.Log("[TEST] Boss được heal full!");
+            Debug.Log("[TEST] Boss healed to full!");
         }
     }
 

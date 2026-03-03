@@ -2,16 +2,16 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Đồng bộ thanh máu player với PlayerHealth (HuuAnh). Gắn vào Canvas/object có Slider thanh máu player.
-/// Nếu thanh máu vẫn full khi bị trừ máu: gắn script này, gán Slider (hoặc để trống để tự tìm), script tự tìm Player theo tag "Player".
+/// Syncs player health bar with PlayerHealth (HuuAnh). Attach to Canvas/object containing the player health bar Slider.
+/// If health bar stays full when taking damage: attach this script, assign Slider (or leave empty to auto-find), script auto-finds Player by "Player" tag.
 /// </summary>
 public class PlayerHealthBarSync : MonoBehaviour
 {
-    [Tooltip("Slider thanh máu - để trống sẽ tự tìm trong con")]
+    [Tooltip("Health bar Slider - leave empty to auto-find in children")]
     public Slider healthSlider;
-    [Tooltip("Text hiển thị số máu (optional)")]
+    [Tooltip("Text displaying health value (optional)")]
     public Text healthText;
-    [Tooltip("Player có PlayerHealth - để trống sẽ tìm GameObject có tag Player")]
+    [Tooltip("Player with PlayerHealth - leave empty to auto-find GameObject with Player tag")]
     public PlayerHealth playerHealth;
 
     private void Start()
@@ -25,7 +25,7 @@ public class PlayerHealthBarSync : MonoBehaviour
                 playerHealth = go.GetComponent<PlayerHealth>() ?? go.GetComponentInChildren<PlayerHealth>();
         }
         if (playerHealth == null)
-            Debug.LogWarning("PlayerHealthBarSync: Không tìm thấy PlayerHealth. Gán tag 'Player' cho object có PlayerHealth hoặc gán tay trong Inspector.");
+            Debug.LogWarning("PlayerHealthBarSync: PlayerHealth not found. Assign 'Player' tag to the object with PlayerHealth or assign manually in Inspector.");
     }
 
     private void Update()

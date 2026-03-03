@@ -2,12 +2,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Health bar UI (HuuAnh) - hỗ trợ BossDaiBangController hoặc PlayerHealth. Gắn vào Canvas, gán healthTarget = Boss hoặc Player.
+/// Health bar UI (HuuAnh) - supports BossDaiBangController or PlayerHealth. Attach to Canvas, assign healthTarget = Boss or Player.
 /// </summary>
 public class HealthBarUIDaiBang : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("BossDaiBangController hoặc PlayerHealth (kéo từ Hierarchy)")]
+    [Tooltip("BossDaiBangController or PlayerHealth (drag from Hierarchy)")]
     public MonoBehaviour healthTarget;
 
     [Tooltip("Health bar slider")]

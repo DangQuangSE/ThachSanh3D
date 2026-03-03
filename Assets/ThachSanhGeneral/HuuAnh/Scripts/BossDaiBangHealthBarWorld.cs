@@ -2,12 +2,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Thanh máu boss Đại Bàng (world space). Gắn vào BossHealthBarCanvas (con của finalv5) hoặc gán boss trong Inspector.
+/// Eagle Boss health bar (world space). Attach to BossHealthBarCanvas (child of finalv5) or assign boss in Inspector.
 /// </summary>
 public class BossDaiBangHealthBarWorld : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("Boss Đại Bàng - để trống sẽ tự tìm BossDaiBangController ở parent")]
+    [Tooltip("Boss Dai Bang - leave empty to auto-find BossDaiBangController in parent")]
     public BossDaiBangController boss;
 
     [Tooltip("Health bar slider")]
@@ -17,7 +17,7 @@ public class BossDaiBangHealthBarWorld : MonoBehaviour
     public Text bossNameText;
 
     [Header("Settings")]
-    [Tooltip("Tên hiển thị trên thanh máu (vd: Dai Bang)")]
+    [Tooltip("Display name on health bar (e.g. Dai Bang)")]
     public string bossDisplayName = "Dai Bang";
 
     [Tooltip("Offset above boss")]
@@ -46,17 +46,17 @@ public class BossDaiBangHealthBarWorld : MonoBehaviour
 
         if (boss == null)
         {
-            Debug.LogWarning("BossDaiBangHealthBarWorld: No boss! Gắn script này vào BossHealthBarCanvas (con của finalv5) hoặc gán Boss trong Inspector.");
+            Debug.LogWarning("BossDaiBangHealthBarWorld: No boss found! Attach this script to BossHealthBarCanvas (child of finalv5) or assign Boss in Inspector.");
             enabled = false;
             return;
         }
 
-        // Tự tìm Slider / Fill trong con nếu chưa gán (chỉ trong HuuAnh)
+        // Auto-find Slider / Fill in children if not assigned
         if (healthSlider == null)
             healthSlider = GetComponentInChildren<Slider>(true);
         if (healthSlider == null)
         {
-            Debug.LogWarning("BossDaiBangHealthBarWorld: Không tìm thấy Slider. Gán Health Slider trong Inspector hoặc thêm Slider vào con của Canvas.");
+            Debug.LogWarning("BossDaiBangHealthBarWorld: Slider not found. Assign Health Slider in Inspector or add a Slider as child of Canvas.");
             enabled = false;
             return;
         }
@@ -68,12 +68,12 @@ public class BossDaiBangHealthBarWorld : MonoBehaviour
         if (bossNameText != null)
             bossNameText.text = string.IsNullOrEmpty(bossDisplayName) ? "Boss" : bossDisplayName;
 
-        // Cảnh báo nếu Canvas không phải World Space → thanh sẽ không nổi trên đầu boss
+        // Warn if Canvas is not World Space - bar will not float above boss head
         var canvas = GetComponent<Canvas>();
         if (canvas != null && canvas.renderMode != RenderMode.WorldSpace)
-            Debug.LogWarning("BossDaiBangHealthBarWorld: Đặt Canvas Render Mode = World Space để thanh máu hiện trên đầu boss (Inspector → Canvas → Render Mode).");
+            Debug.LogWarning("BossDaiBangHealthBarWorld: Set Canvas Render Mode = World Space for the health bar to appear above boss head (Inspector > Canvas > Render Mode).");
 
-        // Màu thanh máu: đỏ (ít máu) -> vàng -> xanh (đầy máu). Ghi đè nếu gradient trắng/chưa chỉnh.
+        // Health bar color: red (low HP) -> yellow -> green (full HP). Override if gradient is white/not configured.
         bool useDefaultGradient = healthColorGradient == null;
         if (!useDefaultGradient)
         {

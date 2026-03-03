@@ -31,12 +31,17 @@ public class PlayerHealth : MonoBehaviour
     private Color[] originalColors;
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
+    private Animator _animator;
+    
+    // Must match the Bool parameter name in Animator exactly
+    private static readonly int AnimIDDead = Animator.StringToHash("Dead");
     
     void Start()
     {
         currentHealth = maxHealth;
         spawnPosition = transform.position;
         spawnRotation = transform.rotation;
+        _animator = GetComponent<Animator>();
         
         // Get all renderers for damage flash effect
         renderers = GetComponentsInChildren<Renderer>();
@@ -116,26 +121,37 @@ public class PlayerHealth : MonoBehaviour
         isDead = true;
         Debug.Log("Player died!");
         
-        // Disable movement
+        // Stop damage flash coroutine if running
+        StopAllCoroutines();
+        
+        // 1. Disable player input/movement first
         var controller = GetComponent<StarterAssets.ThirdPersonController>();
         if (controller != null)
         {
             controller.enabled = false;
         }
         
-        // Disable character controller
+        // 2. Play death animation — use Play() to force immediate state change
+        //    This bypasses any transition conflicts from lingering attack triggers
+        if (_animator != null)
+        {
+            _animator.ResetTrigger("Attack1");
+            _animator.ResetTrigger("Attack2");
+            _animator.ResetTrigger("Attack3");
+            _animator.ResetTrigger("Ultimate");
+            _animator.ResetTrigger("Protect");
+            _animator.ResetTrigger("ESkill");
+            _animator.ResetTrigger("Roll");
+            
+            _animator.SetBool(AnimIDDead, true);
+            _animator.Play("Dead", 0, 0f);
+        }
+        
+        // 3. Disable CharacterController last (after animation is set)
         var charController = GetComponent<CharacterController>();
         if (charController != null)
         {
             charController.enabled = false;
-        }
-        
-        // Play death animation if available
-        var animator = GetComponent<Animator>();
-        if (animator != null)
-        {
-            // Assuming you have a "Death" trigger parameter
-            animator.SetTrigger("Death");
         }
         
         // Respawn after delay
@@ -144,25 +160,32 @@ public class PlayerHealth : MonoBehaviour
     
     private void Respawn()
     {
-        // Reset health
-        currentHealth = maxHealth;
-        isDead = false;
-        
-        // Reset position
-        transform.position = spawnPosition;
-        transform.rotation = spawnRotation;
-        
-        // Re-enable components
-        var controller = GetComponent<StarterAssets.ThirdPersonController>();
-        if (controller != null)
-        {
-            controller.enabled = true;
-        }
-        
+        // 1. Re-enable CharacterController first (required before changing position)
         var charController = GetComponent<CharacterController>();
         if (charController != null)
         {
             charController.enabled = true;
+        }
+        
+        // 2. Reset position
+        transform.position = spawnPosition;
+        transform.rotation = spawnRotation;
+        
+        // 3. Reset health
+        currentHealth = maxHealth;
+        isDead = false;
+        
+        // 4. Exit Dead state — set Dead=false so Dead?Exit transition fires
+        if (_animator != null)
+        {
+            _animator.SetBool(AnimIDDead, false);
+        }
+        
+        // 5. Re-enable movement controller
+        var controller = GetComponent<StarterAssets.ThirdPersonController>();
+        if (controller != null)
+        {
+            controller.enabled = true;
         }
         
         // Update UI

@@ -172,6 +172,21 @@ public class BossDaiBangController : MonoBehaviour
                 target = player.transform;
             }
         }
+
+        // Prevent boss collider from physically pushing the player's CharacterController
+        IgnorePlayerCollision();
+    }
+
+    /// <summary>Disable physics collision between boss and player so NavMeshAgent does not push CharacterController.</summary>
+    private void IgnorePlayerCollision()
+    {
+        if (target == null) return;
+        Collider bossCol = GetComponent<Collider>();
+        Collider playerCol = target.GetComponent<Collider>();
+        if (bossCol != null && playerCol != null)
+        {
+            Physics.IgnoreCollision(bossCol, playerCol);
+        }
     }
 
     void Update()

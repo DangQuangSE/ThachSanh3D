@@ -64,6 +64,12 @@ public class BossDaiBangController : MonoBehaviour
     [Tooltip("Delay after Fireball (Magic) before Roar can be used (seconds). Prevents two fire skills at once.")]
     public float magicToRoarDelay = 1.5f;
 
+    [Header("Roar Stun")]
+    [Tooltip("Enable stun on player when Roar is used")]
+    public bool roarStunEnabled = true;
+    [Tooltip("Stun duration in seconds")]
+    public float roarStunDuration = 5f;
+
     [Header("Player Damage to Boss")]
     [Tooltip("Range within which player attacks can damage boss")]
     public float playerHitRange = 3f;
@@ -128,6 +134,7 @@ public class BossDaiBangController : MonoBehaviour
     private static readonly string[] BossMeleeStates = { "Punch", "Uppercut", "JumpAttack" };
     private bool _playerFlashInProgress;
     private System.Collections.Generic.List<(Renderer r, int matIndex, string prop, Color original)> _playerNormalColorsCache;
+    private bool _isInJumpAttack;
 
     void Start()
     {
@@ -195,6 +202,7 @@ public class BossDaiBangController : MonoBehaviour
 
         UpdateStateMachine();
         UpdateAnimator();
+        SyncJumpAttackRootMotion();
         TryReceiveDamageFromPlayer();
         TryDealDamageToPlayerFromAnimation();
 
@@ -572,6 +580,9 @@ public class BossDaiBangController : MonoBehaviour
                 // Play roar sound immediately via PlayClipAtPoint (independent of AudioSource/animator state)
                 if (sfxRoar != null)
                     AudioSource.PlayClipAtPoint(sfxRoar, transform.position, sfxVolume);
+                // Stun player when roar is triggered
+                if (roarStunEnabled && target != null)
+                    StunEffect.Apply(target.gameObject, roarStunDuration);
                 _roarLockUntil = Time.time + roarDuration;
                 lastAttackTime = Time.time + roarDuration;
                 break;
@@ -746,6 +757,40 @@ public class BossDaiBangController : MonoBehaviour
         if (!hasAnimator) return;
         float speed = (agent != null && !agent.isStopped) ? agent.velocity.magnitude : 0f;
         animator.SetBool(IsWalking, speed > 0.1f);
+    }
+
+    /// <summary>
+    /// During JumpAttack, disable NavMeshAgent.updatePosition so Root Motion controls the boss.
+    /// When JumpAttack ends, Warp the agent to the landing position to prevent snap-back.
+    /// </summary>
+    private void SyncJumpAttackRootMotion()
+    {
+        if (!hasAnimator || agent == null) return;
+
+        AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+        bool inJumpAttack = state.IsName("JumpAttack");
+
+        if (inJumpAttack && !_isInJumpAttack)
+        {
+            // Entering JumpAttack: let Root Motion drive position
+            _isInJumpAttack = true;
+            agent.updatePosition = false;
+            agent.updateRotation = false;
+        }
+        else if (!inJumpAttack && _isInJumpAttack)
+        {
+            // Exiting JumpAttack: sync agent to current (landed) position
+            _isInJumpAttack = false;
+            agent.Warp(transform.position);
+            agent.updatePosition = true;
+            agent.updateRotation = true;
+        }
+
+        // While in JumpAttack, keep agent nextPosition synced to prevent drift
+        if (_isInJumpAttack)
+        {
+            agent.nextPosition = transform.position;
+        }
     }
 
     public float GetHealthPercentage()

@@ -85,6 +85,13 @@ public class ChanTinhBossController : MonoBehaviour
         animator = GetComponent<Animator>();
         player = GameObject.FindGameObjectWithTag("Player").transform;
 
+        // ===== IGNORE PHYSICAL COLLISION BETWEEN BOSS AND PLAYER =====
+        Collider bossCollider = GetComponent<Collider>();
+        Collider playerCollider = player.GetComponent<Collider>();
+        if (bossCollider != null && playerCollider != null)
+        {
+            Physics.IgnoreCollision(bossCollider, playerCollider);
+        }
 
         // ===== GET RENDERERS FOR DAMAGE FLASH =====
         renderers = GetComponentsInChildren<Renderer>();
@@ -328,6 +335,12 @@ public class ChanTinhBossController : MonoBehaviour
             {
                 playerHealth.TakeDamage(attackDamage);
                 Debug.Log($"Chan Tinh Boss dealt {attackDamage} damage to {hitCollider.name}!");
+
+                // Spawn hit VFX at player center (bounds.center = giữa thân player)
+                if (vfxController != null)
+                {
+                    vfxController.PlayHitVfx(hitCollider.bounds.center);
+                }
             }
 
             // Can add other components if the player has multiple health scripts

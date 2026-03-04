@@ -13,6 +13,8 @@ public class VfxController : MonoBehaviour
     [SerializeField] private GameObject jumpAttackVfxPrefab;
     [Tooltip("Ground explosion VFX when Jump Attack lands")]
     [SerializeField] private GameObject jumpAttackGroundVfxPrefab;
+    [Tooltip("VFX hiệu ứng hit khi boss đánh trúng player")]
+    [SerializeField] private GameObject hitVfxPrefab;
 
     [Header("Spawn Points - Drag bones from Hierarchy here")]
     [Tooltip("Right hand (Punch + JumpAttack). Find bone: Armature > Spine > RightArm > RightHand")]
@@ -198,5 +200,34 @@ public class VfxController : MonoBehaviour
                 Debug.LogWarning($"VfxController: No VFX found for attackType {attackType}");
                 return null;
         }
+    }
+
+    /// <summary>
+    /// Spawn hit VFX tại vị trí bị đánh (ví dụ: vị trí player).
+    /// VFX spawn tại world position, tự hủy sau khi phát xong.
+    /// </summary>
+    public void PlayHitVfx(Vector3 position)
+    {
+        if (hitVfxPrefab == null)
+        {
+            Debug.LogWarning("VfxController: hitVfxPrefab is not assigned!");
+            return;
+        }
+
+        GameObject hitVfx = Instantiate(hitVfxPrefab, position, Quaternion.identity);
+        StopLooping(hitVfx);
+
+        // Force play ngay lập tức để tránh bị trễ
+        var particles = hitVfx.GetComponentsInChildren<ParticleSystem>();
+        foreach (var ps in particles)
+        {
+            var main = ps.main;
+            main.startDelay = 0f; // Xóa delay nếu có trong prefab
+            ps.Clear();           // Xóa particle cũ
+            ps.Play(true);        // Bắt đầu phát ngay
+        }
+
+        float duration = GetParticleDuration(hitVfx);
+        Destroy(hitVfx, duration);
     }
 }

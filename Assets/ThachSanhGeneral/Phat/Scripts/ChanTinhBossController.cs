@@ -85,6 +85,13 @@ public class ChanTinhBossController : MonoBehaviour
         animator = GetComponent<Animator>();
         player = GameObject.FindGameObjectWithTag("Player").transform;
 
+        // ===== IGNORE PHYSICAL COLLISION BETWEEN BOSS AND PLAYER =====
+        Collider bossCollider = GetComponent<Collider>();
+        Collider playerCollider = player.GetComponent<Collider>();
+        if (bossCollider != null && playerCollider != null)
+        {
+            Physics.IgnoreCollision(bossCollider, playerCollider);
+        }
 
         // ===== GET RENDERERS FOR DAMAGE FLASH =====
         renderers = GetComponentsInChildren<Renderer>();

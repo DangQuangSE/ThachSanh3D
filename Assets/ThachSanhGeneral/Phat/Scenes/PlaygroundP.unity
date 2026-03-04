@@ -1821,6 +1821,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: SnakeBoss
       objectReference: {fileID: 0}
+    - target: {fileID: 1113323504445381616, guid: d132939fee7da4a409c78d671a80cb00, type: 3}
+      propertyPath: m_Height
+      value: 1.2140892
+      objectReference: {fileID: 0}
+    - target: {fileID: 1113323504445381616, guid: d132939fee7da4a409c78d671a80cb00, type: 3}
+      propertyPath: m_Radius
+      value: 0.2853235
+      objectReference: {fileID: 0}
+    - target: {fileID: 1113323504445381616, guid: d132939fee7da4a409c78d671a80cb00, type: 3}
+      propertyPath: m_Center.x
+      value: 0.014832444
+      objectReference: {fileID: 0}
+    - target: {fileID: 1113323504445381616, guid: d132939fee7da4a409c78d671a80cb00, type: 3}
+      propertyPath: m_Center.y
+      value: 0.5288986
+      objectReference: {fileID: 0}
+    - target: {fileID: 1113323504445381616, guid: d132939fee7da4a409c78d671a80cb00, type: 3}
+      propertyPath: m_Center.z
+      value: -0.039065573
+      objectReference: {fileID: 0}
     - target: {fileID: 5320428124793560609, guid: d132939fee7da4a409c78d671a80cb00, type: 3}
       propertyPath: hitVfxPrefab
       value: 

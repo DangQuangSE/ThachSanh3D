@@ -93,6 +93,9 @@ namespace StarterAssets
         [Range(0f, 1f)]
         public float ultimateBossImpactSpawnTime = 0.5f;
 
+        [Tooltip("Tag used to find boss for impact VFX (must match boss GameObject tag)")]
+        public string bossTag = "boss";
+
         [Header("VFX Playback Settings")]
         [Tooltip("Auto-play particle systems on spawn (enable if VFX doesn't show)")]
         public bool autoPlayParticleSystems = true;
@@ -441,18 +444,36 @@ namespace StarterAssets
                 return;
             }
 
-            // Find nearest alive boss
-            BossController[] bosses = Object.FindObjectsOfType<BossController>();
+            // Find nearest alive boss by tag
             Transform closestBoss = null;
             float closestDist = float.MaxValue;
-            foreach (BossController boss in bosses)
+
+            if (!string.IsNullOrEmpty(bossTag))
             {
-                if (boss.IsDead()) continue;
-                float dist = Vector3.Distance(transform.position, boss.transform.position);
-                if (dist < closestDist)
+                GameObject[] bosses = GameObject.FindGameObjectsWithTag(bossTag);
+                foreach (GameObject bossObj in bosses)
                 {
-                    closestDist = dist;
-                    closestBoss = boss.transform;
+                    // Check if boss is dead via reflection (works with any boss type)
+                    bool isDead = false;
+                    MonoBehaviour[] components = bossObj.GetComponents<MonoBehaviour>();
+                    foreach (MonoBehaviour comp in components)
+                    {
+                        System.Reflection.MethodInfo method = comp.GetType().GetMethod("IsDead",
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                        if (method != null && method.ReturnType == typeof(bool) && method.GetParameters().Length == 0)
+                        {
+                            isDead = (bool)method.Invoke(comp, null);
+                            break;
+                        }
+                    }
+                    if (isDead) continue;
+
+                    float dist = Vector3.Distance(transform.position, bossObj.transform.position);
+                    if (dist < closestDist)
+                    {
+                        closestDist = dist;
+                        closestBoss = bossObj.transform;
+                    }
                 }
             }
 

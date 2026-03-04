@@ -25,11 +25,37 @@ public class DaiBangFireballProjectile : MonoBehaviour
     [Tooltip("Explosion VFX when fireball hits player / wall")]
     public GameObject hitVfx;
 
+    [Header("SFX")]
+    [Tooltip("Fireball flying sound (looping) - auto-plays on spawn")]
+    public AudioClip sfxFlyLoop;
+    [Tooltip("Explosion sound when fireball hits target")]
+    public AudioClip sfxHitExplosion;
+    [Range(0f, 1f)] public float sfxVolume = 0.6f;
+
     private Vector3 _startPos;
+    private AudioSource _audioSource;
 
     private void Start()
     {
         _startPos = transform.position;
+
+        // Setup AudioSource for fly loop sound
+        _audioSource = GetComponent<AudioSource>();
+        if (_audioSource == null)
+            _audioSource = gameObject.AddComponent<AudioSource>();
+        _audioSource.playOnAwake = false;
+        _audioSource.spatialBlend = 1f;
+        _audioSource.minDistance = 1f;
+        _audioSource.maxDistance = 20f;
+        _audioSource.rolloffMode = AudioRolloffMode.Linear;
+
+        if (sfxFlyLoop != null)
+        {
+            _audioSource.clip = sfxFlyLoop;
+            _audioSource.loop = true;
+            _audioSource.volume = sfxVolume * 0.5f;
+            _audioSource.Play();
+        }
     }
 
     private void Update()
@@ -55,6 +81,12 @@ public class DaiBangFireballProjectile : MonoBehaviour
         if (ph != null && !ph.IsDead())
         {
             ph.TakeDamage(damage);
+        }
+
+        // Play explosion sound at impact position (persists after Destroy)
+        if (sfxHitExplosion != null)
+        {
+            AudioSource.PlayClipAtPoint(sfxHitExplosion, transform.position, sfxVolume);
         }
 
         // Spawn explosion VFX (if assigned)

@@ -16,6 +16,7 @@ namespace StarterAssets
 		public bool ultimate;
 		public bool protect;
 		public bool eskill;
+		public bool roll;
 
 		[Header("Movement Settings")]
 		public bool analogMovement;
@@ -67,6 +68,11 @@ namespace StarterAssets
 		{
 			ESkillInput(value.isPressed);
 		}
+
+		public void OnRoll(InputValue value)
+		{
+			RollInput(value.isPressed);
+		}
 #endif
 
 
@@ -108,6 +114,11 @@ namespace StarterAssets
 		public void ESkillInput(bool newESkillState)
 		{
 			eskill = newESkillState;
+		}
+
+		public void RollInput(bool newRollState)
+		{
+			roll = newRollState;
 		}
 
 		private void OnApplicationFocus(bool hasFocus)

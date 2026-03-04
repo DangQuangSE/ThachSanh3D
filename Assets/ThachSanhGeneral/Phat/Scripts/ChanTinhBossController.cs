@@ -335,6 +335,12 @@ public class ChanTinhBossController : MonoBehaviour
             {
                 playerHealth.TakeDamage(attackDamage);
                 Debug.Log($"Chan Tinh Boss dealt {attackDamage} damage to {hitCollider.name}!");
+
+                // Spawn hit VFX at player center (bounds.center = giữa thân player)
+                if (vfxController != null)
+                {
+                    vfxController.PlayHitVfx(hitCollider.bounds.center);
+                }
             }
 
             // Can add other components if the player has multiple health scripts

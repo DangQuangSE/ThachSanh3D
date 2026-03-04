@@ -1821,6 +1821,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SnakeBoss
       objectReference: {fileID: 0}
+    - target: {fileID: 5320428124793560609, guid: d132939fee7da4a409c78d671a80cb00, type: 3}
+      propertyPath: hitVfxPrefab
+      value: 
+      objectReference: {fileID: 5024009746357069194, guid: ec3f674830402cc45bce805cf6493db7, type: 3}
     - target: {fileID: 8066375179428468941, guid: d132939fee7da4a409c78d671a80cb00, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0

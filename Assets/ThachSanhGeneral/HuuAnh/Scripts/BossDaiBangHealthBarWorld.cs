@@ -17,8 +17,8 @@ public class BossDaiBangHealthBarWorld : MonoBehaviour
     public Text bossNameText;
 
     [Header("Settings")]
-    [Tooltip("Display name on health bar (e.g. Dai Bang)")]
-    public string bossDisplayName = "Dai Bang";
+    [Tooltip("Display name on health bar (e.g. Eagle Boss)")]
+    public string bossDisplayName = "Eagle Boss";
 
     [Tooltip("Offset above boss")]
     public Vector3 offset = new Vector3(0, 3f, 0);

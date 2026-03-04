@@ -70,6 +70,28 @@ public class BossDaiBangController : MonoBehaviour
     [Tooltip("Damage per hit if PlayerAttack component not found on player (default 25)")]
     public float fallbackPlayerDamage = 25f;
 
+    // ==================== SFX ====================
+    [Header("SFX (drag AudioClip here - leave empty to skip)")]
+    [Tooltip("Roar scream (Mutant Roaring) - synced to animation, not trigger")]
+    public AudioClip sfxRoar;
+    [Tooltip("JumpAttack sound (ground slam / heavy impact)")]
+    public AudioClip sfxJumpAttack;
+    [Tooltip("MagicAttack / Fireball cast sound")]
+    public AudioClip sfxMagicAttack;
+    [Tooltip("Hit impact when attack lands on player")]
+    public AudioClip sfxHit;
+    [Tooltip("Boss hurt grunt when taking damage")]
+    public AudioClip sfxHurt;
+    [Tooltip("Boss death cry")]
+    public AudioClip sfxDeath;
+    [Range(0f, 1f)] public float sfxVolume = 0.7f;
+    // ==================== END SFX ====================
+
+    private AudioSource _audioSource;
+    private float _lastHurtSoundTime;
+    private bool _jumpAttackSoundPlayedThisCast;
+    private bool _magicAttackSoundPlayedThisCast;
+
     private BossState currentState = BossState.Idle;
     private float currentHealth;
     private NavMeshAgent agent;
@@ -81,7 +103,6 @@ public class BossDaiBangController : MonoBehaviour
     private bool hasAnimator;
     private Vector3 spawnPosition;
 
-    // Animator HuuAnh (BossDaiBang): isWalking, Punch, Uppercut, JumpAttack, MagicAttack, Die
     private static readonly int IsWalking = Animator.StringToHash("isWalking");
     private static readonly int AnimIDPunch = Animator.StringToHash("Punch");
     private static readonly int AnimIDUppercut = Animator.StringToHash("Uppercut");
@@ -123,6 +144,16 @@ public class BossDaiBangController : MonoBehaviour
 
         hasAnimator = TryGetComponent(out animator);
 
+        // Auto-create AudioSource if missing, configure for 3D spatial sound
+        _audioSource = GetComponent<AudioSource>();
+        if (_audioSource == null)
+            _audioSource = gameObject.AddComponent<AudioSource>();
+        _audioSource.playOnAwake = false;
+        _audioSource.spatialBlend = 1f;
+        _audioSource.minDistance = 2f;
+        _audioSource.maxDistance = 25f;
+        _audioSource.rolloffMode = AudioRolloffMode.Linear;
+
         renderers = GetComponentsInChildren<Renderer>();
         originalColors = new Color[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
@@ -156,6 +187,13 @@ public class BossDaiBangController : MonoBehaviour
             CachePlayerNormalColors(target);
     }
 
+    /// <summary>Play a one-shot SFX clip via the boss AudioSource (3D positioned). Null-safe.</summary>
+    private void PlaySFX(AudioClip clip)
+    {
+        if (clip == null || _audioSource == null) return;
+        _audioSource.PlayOneShot(clip, sfxVolume);
+    }
+
     private const string BaseColorProp = "_BaseColor";
     private const string ColorProp = "_Color";
 
@@ -178,7 +216,7 @@ public class BossDaiBangController : MonoBehaviour
         _playerNormalColorsCache = list;
     }
 
-    /// <summary>Boss đánh trừ máu player theo animation (không cần Animation Event) - để test.</summary>
+    /// <summary>Deal damage to player based on animation state (no Animation Event required) - for testing.</summary>
     private void TryDealDamageToPlayerFromAnimation()
     {
         if (target == null || !hasAnimator || isDead) return;
@@ -187,11 +225,20 @@ public class BossDaiBangController : MonoBehaviour
         float nt = state.normalizedTime % 1f;
         int stateHash = state.fullPathHash;
 
-        // MagicAttack: chỉ spawn fireball một lần theo animation, không cần Animation Event
+        // MagicAttack: spawn fireball once per animation, play sound synced to cast moment
         if (state.IsName("MagicAttack"))
         {
             if (nt < 0.05f)
+            {
                 _magicAttackSpawnedThisCast = false;
+                _magicAttackSoundPlayedThisCast = false;
+            }
+
+            if (!_magicAttackSoundPlayedThisCast && nt >= 0.1f && nt <= 0.4f)
+            {
+                PlaySFX(sfxMagicAttack);
+                _magicAttackSoundPlayedThisCast = true;
+            }
 
             if (!_magicAttackSpawnedThisCast && nt >= 0.2f && nt <= 0.6f)
             {
@@ -202,7 +249,7 @@ public class BossDaiBangController : MonoBehaviour
             return;
         }
 
-        // Mutant Roaring: chỉ tính damage khi đang state Roar (không spawn hiệu ứng lửa)
+        // Mutant Roaring: damage only (sound is played from PerformAttack via PlayClipAtPoint)
         bool isRoarState =
             state.IsName("Mutant Roaring") ||
             state.IsName("MutantRoaring") ||
@@ -225,6 +272,7 @@ public class BossDaiBangController : MonoBehaviour
                     if (roarPh != null && !roarPh.IsDead())
                     {
                         roarPh.TakeDamage(attackDamage * 0.8f);
+                        PlaySFX(sfxHit);
                         StartCoroutine(FlashPlayerRed(target));
                         _roarDamageDoneThisCast = true;
                     }
@@ -236,6 +284,18 @@ public class BossDaiBangController : MonoBehaviour
         else
         {
             _magicAttackSpawnedThisCast = false;
+        }
+
+        // JumpAttack: play sound at 5-20% (early, synced to jump/descend)
+        if (state.IsName("JumpAttack"))
+        {
+            if (nt < 0.03f)
+                _jumpAttackSoundPlayedThisCast = false;
+            if (!_jumpAttackSoundPlayedThisCast && nt >= 0.05f && nt <= 0.2f)
+            {
+                PlaySFX(sfxJumpAttack);
+                _jumpAttackSoundPlayedThisCast = true;
+            }
         }
 
         bool isMeleeState = false;
@@ -262,16 +322,24 @@ public class BossDaiBangController : MonoBehaviour
         if (ph == null || ph.IsDead()) return;
 
         ph.TakeDamage(attackDamage);
+
+        // Only play sfxHit for Punch/Uppercut (JumpAttack has its own sfxJumpAttack)
         if (state.IsName("Punch") || state.IsName("Uppercut"))
+        {
+            PlaySFX(sfxHit);
             SpawnGreenHitOnPlayer();
+        }
         else if (state.IsName("JumpAttack"))
+        {
             SpawnJumpAttackMagic();
+        }
+
         StartCoroutine(FlashPlayerRed(target));
         _lastBossAttackHitDone = true;
         _lastBossAttackStateHash = stateHash;
     }
 
-    /// <summary>Nhấp nháy đỏ khi boss đánh trúng, xong trở lại bình thường (không đỏ suốt). Dùng cache màu bình thường để restore đúng.</summary>
+    /// <summary>Flash player red on hit, then restore original colors. Uses cached normal colors to restore correctly.</summary>
     private IEnumerator FlashPlayerRed(Transform playerTransform)
     {
         if (playerTransform == null || _playerFlashInProgress) yield break;
@@ -318,7 +386,7 @@ public class BossDaiBangController : MonoBehaviour
         _playerFlashInProgress = false;
     }
 
-    /// <summary>Spawn hiệu ứng Green Hit khi boss đánh trúng player (gọi từ code hoặc Animation Event).</summary>
+    /// <summary>Spawn Green Hit VFX on player when boss melee lands (called from code or Animation Event).</summary>
     private void SpawnGreenHitOnPlayer()
     {
         if (fxGreenHit == null) return;
@@ -328,7 +396,7 @@ public class BossDaiBangController : MonoBehaviour
         Destroy(vfx, 3f);
     }
 
-    /// <summary>Boss tự nhận damage khi player đang đánh và đứng gần (chỉ HuuAnh, không cần sửa Bach).</summary>
+    /// <summary>Boss receives damage when player is attacking nearby (HuuAnh only, no changes to Bach).</summary>
     private void TryReceiveDamageFromPlayer()
     {
         if (target == null || isDead) return;
@@ -420,7 +488,6 @@ public class BossDaiBangController : MonoBehaviour
 
             case BossState.Attack:
                 if (agent != null) agent.isStopped = true;
-                // Do not reset _attackRotationIndex: preserve attack rotation to reach skill 6 (Mutant Roaring) even if player exits and re-enters attack range
                 break;
         }
     }
@@ -464,7 +531,7 @@ public class BossDaiBangController : MonoBehaviour
         }
     }
 
-    /// <summary>Vòng chiêu cố định: Punch x2 → Uppercut → Jump Attack → Fireball (MagicAttack), rồi lặp.</summary>
+    /// <summary>Fixed attack rotation: Punch x2 -> Uppercut -> Jump Attack -> Fireball (MagicAttack) -> Mutant Roaring, then loops.</summary>
     private void PerformAttack()
     {
         if (!hasAnimator || target == null) return;
@@ -483,12 +550,15 @@ public class BossDaiBangController : MonoBehaviour
                 break;
             case 4:
                 animator.SetTrigger(AnimIDMagicAttack);
-                lastAttackTime = Time.time + magicToRoarDelay; // After fireball, wait magicToRoarDelay seconds before Roar
+                lastAttackTime = Time.time + magicToRoarDelay;
                 break;
             case 5:
                 animator.SetTrigger(AnimIDMutantRoaring);
-                _roarLockUntil = Time.time + roarDuration;   // Stand still during Roar, then resume attacks
-                lastAttackTime = Time.time + roarDuration;  // Next attack cooldown = end of Roar duration
+                // Play roar sound immediately via PlayClipAtPoint (independent of AudioSource/animator state)
+                if (sfxRoar != null)
+                    AudioSource.PlayClipAtPoint(sfxRoar, transform.position, sfxVolume);
+                _roarLockUntil = Time.time + roarDuration;
+                lastAttackTime = Time.time + roarDuration;
                 break;
             default:
                 animator.SetTrigger(AnimIDPunch);
@@ -498,7 +568,7 @@ public class BossDaiBangController : MonoBehaviour
         _attackRotationIndex = (_attackRotationIndex + 1) % 6;
     }
 
-    /// <summary>Gọi từ Animation Event trên clip Punch / Uppercut / Jump Attack (frame đánh trúng).</summary>
+    /// <summary>Called from Animation Event on Punch / Uppercut / JumpAttack clips (damage frame).</summary>
     public void DealDamageToPlayer()
     {
         Transform point = attackPoint != null ? attackPoint : transform;
@@ -536,6 +606,7 @@ public class BossDaiBangController : MonoBehaviour
 
         if (didHit)
         {
+            PlaySFX(sfxHit);
             if (hasAnimator)
             {
                 AnimatorStateInfo st = animator.GetCurrentAnimatorStateInfo(0);
@@ -559,10 +630,8 @@ public class BossDaiBangController : MonoBehaviour
     public void SpawnJumpAttackMagic()
     {
         if (fxWeaponEffect == null) return;
-        // Use jumpAttackSpawnPoint (boss feet, near ground) instead of magicSpawnPoint (hand/staff, high up)
         Transform point = jumpAttackSpawnPoint != null ? jumpAttackSpawnPoint : transform;
 
-        // Spawn ground impact VFX at boss landing position (ground level)
         Vector3 spawnPos = point.position;
         Quaternion spawnRot = point.rotation;
         if (target != null)
@@ -608,6 +677,14 @@ public class BossDaiBangController : MonoBehaviour
         if (isDead) return;
         currentHealth -= damage;
         currentHealth = Mathf.Max(currentHealth, 0);
+
+        // Hurt sound with 0.5s cooldown to prevent spam during player combos
+        if (Time.time - _lastHurtSoundTime >= 0.5f)
+        {
+            PlaySFX(sfxHurt);
+            _lastHurtSoundTime = Time.time;
+        }
+
         StartCoroutine(DamageFlash());
         if (currentState == BossState.Idle) ChangeState(BossState.Chase);
         if (currentHealth <= 0) Die();
@@ -638,6 +715,11 @@ public class BossDaiBangController : MonoBehaviour
     {
         isDead = true;
         currentState = BossState.Death;
+
+        // Use PlayClipAtPoint so death sound keeps playing after GameObject is destroyed
+        if (sfxDeath != null)
+            AudioSource.PlayClipAtPoint(sfxDeath, transform.position, sfxVolume);
+
         if (agent != null) { agent.isStopped = true; agent.enabled = false; }
         if (hasAnimator) animator.SetTrigger(AnimIDDie);
         if (TryGetComponent<Collider>(out var col)) col.enabled = false;

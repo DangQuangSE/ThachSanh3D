@@ -46,6 +46,27 @@ public class ChanTinhBossController : MonoBehaviour
     [Tooltip("Drag and drop the GameObject containing VfxController here")]
     [SerializeField] private VfxController vfxController;
 
+    [Header("Sound Effects")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip punchSound;
+    [SerializeField] private AudioClip swipeSound;
+    [SerializeField] private AudioClip roarSound;
+    [SerializeField] private AudioClip jumpAttackSound;
+    [SerializeField] private AudioClip jumpAttackLandSound;
+    [SerializeField] private AudioClip flexingSound;
+    [SerializeField] private AudioClip dieSound;
+
+    [Header("Footstep Sound")]
+    [SerializeField] private AudioClip footstepSound;
+    [Tooltip("Volume khi Walk (0-1)")]
+    [SerializeField] [Range(0f, 1f)] private float walkFootstepVolume = 0.4f;
+    [Tooltip("Volume khi Run (0-1)")]
+    [SerializeField] [Range(0f, 1f)] private float runFootstepVolume = 0.7f;
+    [Tooltip("Pitch khi Walk")]
+    [SerializeField] private float walkFootstepPitch = 0.9f;
+    [Tooltip("Pitch khi Run")]
+    [SerializeField] private float runFootstepPitch = 1.1f;
+
     [Header("Attack Cooldowns")]
     [SerializeField] private float roarCooldown = 10f; // Cooldown time for roar attack
     [SerializeField] private float swipeCooldown = 3f;
@@ -113,6 +134,10 @@ public class ChanTinhBossController : MonoBehaviour
         punchHash = Animator.StringToHash("Punch");
         jumpAttackHash = Animator.StringToHash("JumpAttack");
         hitHash = Animator.StringToHash("Hit");
+
+        // Auto-get AudioSource if not assigned
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
 
         agent.updateRotation = true; // Allow NavMeshAgent to auto-rotate towards movement direction
         agent.updatePosition = true; // Allow NavMeshAgent to auto-update boss position during movement
@@ -430,6 +455,45 @@ public class ChanTinhBossController : MonoBehaviour
         return currentHealth / maxHealth;
     }
 
+
+    // ===== SOUND EFFECTS (call from Animation Events) =====
+    private void PlaySound(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+        {
+            audioSource.PlayOneShot(clip);
+        }
+    }
+
+    // --- Gọi từ Animation Event tại frame bạn muốn ---
+    public void PlayPunchSound()      { PlaySound(punchSound); }
+    public void PlaySwipeSound()      { PlaySound(swipeSound); }
+    public void PlayRoarSound()       { PlaySound(roarSound); }
+    public void PlayJumpAttackSound() { PlaySound(jumpAttackSound); }
+    public void PlayJumpAttackLandSound() { PlaySound(jumpAttackLandSound); }
+    public void PlayFlexingSound()    { PlaySound(flexingSound); }
+    public void PlayDieSound()        { PlaySound(dieSound); }
+
+    // --- Footstep: gọi từ Animation Event tại frame chân chạm đất ---
+    public void PlayWalkFootstep()
+    {
+        if (audioSource != null && footstepSound != null)
+        {
+            audioSource.pitch = walkFootstepPitch;
+            audioSource.PlayOneShot(footstepSound, walkFootstepVolume);
+            audioSource.pitch = 1f; // reset pitch
+        }
+    }
+
+    public void PlayRunFootstep()
+    {
+        if (audioSource != null && footstepSound != null)
+        {
+            audioSource.pitch = runFootstepPitch;
+            audioSource.PlayOneShot(footstepSound, runFootstepVolume);
+            audioSource.pitch = 1f; // reset pitch
+        }
+    }
 
     // Display detection range and attack range circles
     // in the editor for easy adjustment

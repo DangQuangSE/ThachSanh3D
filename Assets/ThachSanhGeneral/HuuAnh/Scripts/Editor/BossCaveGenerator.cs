@@ -128,4 +128,29 @@ public class BossCaveGenerator : MonoBehaviour
         Selection.activeGameObject = caveRoot;
         Debug.Log("Đã tạo xong Arena Hang Động Boss! Bạn có thể xem trong Scene.");
     }
+
+    [MenuItem("HuuAnh/Fix Dark Scene (Restore Default Brightness)")]
+    public static void RestoreBrightEnvironment()
+    {
+        // 1. Chỉnh Mặt trời sáng lên
+        Light[] allLights = GameObject.FindObjectsOfType<Light>();
+        foreach (Light light in allLights)
+        {
+            if (light.type == LightType.Directional)
+            {
+                Undo.RecordObject(light, "Restore Directional Light");
+                light.intensity = 1.0f; 
+                light.color = Color.white; 
+            }
+        }
+
+        // 2. Tắt sương mù đi
+        RenderSettings.fog = false;
+
+        // 3. Khôi phục ánh sáng phản chiếu (Ambient) sáng sủa
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(0.8f, 0.8f, 0.8f);
+
+        Debug.Log("Đã khôi phục ánh sáng bình thường! Nếu nền trời vẫn đen, hãy vào Window > Rendering > Lighting, kéo một Material vào ô Skybox Material.");
+    }
 }

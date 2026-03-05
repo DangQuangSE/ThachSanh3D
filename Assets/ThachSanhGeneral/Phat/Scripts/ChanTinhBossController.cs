@@ -52,6 +52,7 @@ public class ChanTinhBossController : MonoBehaviour
     [SerializeField] private AudioClip swipeSound;
     [SerializeField] private AudioClip roarSound;
     [SerializeField] private AudioClip jumpAttackSound;
+    [SerializeField] private AudioClip jumpAttackLandSound;
     [SerializeField] private AudioClip flexingSound;
     [SerializeField] private AudioClip dieSound;
 
@@ -469,6 +470,7 @@ public class ChanTinhBossController : MonoBehaviour
     public void PlaySwipeSound()      { PlaySound(swipeSound); }
     public void PlayRoarSound()       { PlaySound(roarSound); }
     public void PlayJumpAttackSound() { PlaySound(jumpAttackSound); }
+    public void PlayJumpAttackLandSound() { PlaySound(jumpAttackLandSound); }
     public void PlayFlexingSound()    { PlaySound(flexingSound); }
     public void PlayDieSound()        { PlaySound(dieSound); }
 

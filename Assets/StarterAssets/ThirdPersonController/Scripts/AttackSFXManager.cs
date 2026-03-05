@@ -35,6 +35,16 @@ namespace StarterAssets
         [Tooltip("Voice sound for E Skill (character shout/grunt)")]
         public AudioClip eSkillVoiceSFX;
 
+        [Header("Ultimate Skill Sound Clips")]
+        [Tooltip("Voice/shout during ultimate (plays early so peak aligns with axe slam)")]
+        public AudioClip ultimateVoiceSFX;
+
+        [Tooltip("Axe slam impact sound (plays when player slams axe into ground)")]
+        public AudioClip ultimateAxeSlamSFX;
+
+        [Tooltip("Ice cracking sound (plays when ice emerges from ground at boss position)")]
+        public AudioClip ultimateIceCrackingSFX;
+
         [Header("Volume")]
         [Range(0f, 1f)]
         [Tooltip("Volume for slash sound effects")]
@@ -43,6 +53,18 @@ namespace StarterAssets
         [Range(0f, 1f)]
         [Tooltip("Volume for voice sound effects")]
         public float voiceVolume = 0.8f;
+
+        [Range(0f, 1f)]
+        [Tooltip("Volume for ultimate voice")]
+        public float ultimateVoiceVolume = 0.9f;
+
+        [Range(0f, 1f)]
+        [Tooltip("Volume for axe slam impact")]
+        public float ultimateAxeSlamVolume = 0.8f;
+
+        [Range(0f, 1f)]
+        [Tooltip("Volume for ice cracking effect")]
+        public float ultimateIceCrackingVolume = 0.7f;
 
         [Header("Slash Timing Settings")]
         [Tooltip("Normalized time (0-1) in Attack 1 animation when slash sound plays")]
@@ -78,6 +100,19 @@ namespace StarterAssets
         [Range(0f, 1f)]
         public float eSkillVoicePlayTime = 0.05f;
 
+        [Header("Ultimate Timing Settings")]
+        [Tooltip("Normalized time (0-1) when ultimate voice/shout plays (early, so peak aligns with slam)")]
+        [Range(0f, 1f)]
+        public float ultimateVoicePlayTime = 0.15f;
+
+        [Tooltip("Normalized time (0-1) when axe slam sound plays (moment player hits ground)")]
+        [Range(0f, 1f)]
+        public float ultimateAxeSlamPlayTime = 0.35f;
+
+        [Tooltip("Normalized time (0-1) when ice cracking sound plays (ice emerges from ground, slightly after slam)")]
+        [Range(0f, 1f)]
+        public float ultimateIceCrackingPlayTime = 0.5f;
+
         [Header("Debug")]
         [Tooltip("Show debug logs when sounds play")]
         public bool showDebugLogs = false;
@@ -91,10 +126,12 @@ namespace StarterAssets
         private bool _attack2VoicePlayed;
         private bool _attack3VoicePlayed;
         private bool _eSkillVoicePlayed;
+        private bool _ultimateVoicePlayed;
+        private bool _ultimateAxeSlamPlayed;
+        private bool _ultimateIceCrackingPlayed;
 
-        // Track whether we're already inside the E Skill state to prevent
-        // re-triggering SFX when the animation loops (normalizedTime wraps around)
         private bool _eSkillStateEntered;
+        private bool _ultimateStateEntered;
 
         private void Start()
         {
@@ -236,6 +273,46 @@ namespace StarterAssets
                 _eSkillStateEntered = false;
                 _eSkillPlayed = false;
                 _eSkillVoicePlayed = false;
+            }
+
+            // Ultimate Skill (UntimateAttack / UntimateAttack_1)
+            if (state.IsName("UntimateAttack") || state.IsName("UntimateAttack_1"))
+            {
+                if (!_ultimateStateEntered)
+                {
+                    _ultimateStateEntered = true;
+                    _ultimateVoicePlayed = false;
+                    _ultimateAxeSlamPlayed = false;
+                    _ultimateIceCrackingPlayed = false;
+                }
+
+                // (1) Voice/shout — plays early so the peak of the shout aligns with the axe slam moment
+                if (t >= ultimateVoicePlayTime && !_ultimateVoicePlayed)
+                {
+                    PlaySFX(ultimateVoiceSFX, "Ultimate Voice", ultimateVoiceVolume);
+                    _ultimateVoicePlayed = true;
+                }
+
+                // (2) Axe slam — plays at the exact moment player slams axe into ground
+                if (t >= ultimateAxeSlamPlayTime && !_ultimateAxeSlamPlayed)
+                {
+                    PlaySFX(ultimateAxeSlamSFX, "Ultimate Axe Slam", ultimateAxeSlamVolume);
+                    _ultimateAxeSlamPlayed = true;
+                }
+
+                // (3) Ice cracking — plays slightly after slam when ice emerges from ground at boss
+                if (t >= ultimateIceCrackingPlayTime && !_ultimateIceCrackingPlayed)
+                {
+                    PlaySFX(ultimateIceCrackingSFX, "Ultimate Ice Cracking", ultimateIceCrackingVolume);
+                    _ultimateIceCrackingPlayed = true;
+                }
+            }
+            else
+            {
+                _ultimateStateEntered = false;
+                _ultimateVoicePlayed = false;
+                _ultimateAxeSlamPlayed = false;
+                _ultimateIceCrackingPlayed = false;
             }
         }
 

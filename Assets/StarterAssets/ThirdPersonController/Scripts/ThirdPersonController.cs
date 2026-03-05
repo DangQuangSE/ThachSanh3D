@@ -95,6 +95,10 @@ namespace StarterAssets
         [Header("Combat Targeting")]
         [Tooltip("Automatically face the nearest enemy when attacking or using skills")]
         public bool AutoAimOnCombat = true;
+        [Tooltip("Drag the boss/enemy Transform here for each scene. If empty, auto-finds by EnemyTag")]
+        public Transform ManualCombatTarget;
+        [Tooltip("Tag used to auto-find enemies when ManualCombatTarget is not set")]
+        public string EnemyTag = "boss";
         [Tooltip("Max range to search for a target to auto-aim at")]
         public float AutoAimRange = 15f;
         [Tooltip("How fast player snaps to face the target (degrees/second)")]
@@ -1139,17 +1143,18 @@ namespace StarterAssets
         private void OnUltimateHit(AnimationEvent animationEvent)
         {
             // Called by AnimationEvent on ultimate animation
-            // Deal damage and stun boss (VFX is handled by AttackVFXManager)
+            // Deal damage and stun target (works with any boss type)
             if (_combatTarget != null)
             {
-                BossController boss = _combatTarget.GetComponent<BossController>();
-                if (boss != null && !boss.IsDead())
+                if (!IsTargetDead(_combatTarget))
                 {
-                    boss.TakeDamage(UltimateDamage);
-                    Debug.Log($"Ultimate hit boss for {UltimateDamage} damage!");
+                    // TakeDamage — works on any boss that has TakeDamage(float)
+                    _combatTarget.SendMessage("TakeDamage", UltimateDamage, SendMessageOptions.DontRequireReceiver);
+                    Debug.Log($"Ultimate hit target for {UltimateDamage} damage!");
 
-                    boss.Stun(UltimateStunDuration);
-                    Debug.Log($"Boss stunned for {UltimateStunDuration}s!");
+                    // Stun — works on any boss that has Stun(float), ignored if not supported
+                    _combatTarget.SendMessage("Stun", UltimateStunDuration, SendMessageOptions.DontRequireReceiver);
+                    Debug.Log($"Target stunned for {UltimateStunDuration}s!");
                 }
             }
         }
@@ -1205,16 +1210,62 @@ namespace StarterAssets
         private void FindCombatTarget()
         {
             if (!AutoAimOnCombat) return;
-            BossController[] bosses = Object.FindObjectsOfType<BossController>();
+
+            // If manual target is assigned and still alive, use it
+            if (ManualCombatTarget != null)
+            {
+                if (!IsTargetDead(ManualCombatTarget))
+                {
+                    float dist = Vector3.Distance(transform.position, ManualCombatTarget.position);
+                    if (dist <= AutoAimRange)
+                    {
+                        _combatTarget = ManualCombatTarget;
+                        return;
+                    }
+                }
+                // Manual target is dead or out of range
+                _combatTarget = null;
+                return;
+            }
+
+            // Fallback: auto-find nearest enemy by tag
+            if (string.IsNullOrEmpty(EnemyTag))
+            {
+                _combatTarget = null;
+                return;
+            }
+
+            GameObject[] enemies = GameObject.FindGameObjectsWithTag(EnemyTag);
             float closestDist = AutoAimRange;
             Transform closest = null;
-            foreach (BossController boss in bosses)
+            foreach (GameObject enemy in enemies)
             {
-                if (boss.IsDead()) continue;
-                float dist = Vector3.Distance(transform.position, boss.transform.position);
-                if (dist < closestDist) { closestDist = dist; closest = boss.transform; }
+                if (IsTargetDead(enemy.transform)) continue;
+                float dist = Vector3.Distance(transform.position, enemy.transform.position);
+                if (dist < closestDist)
+                {
+                    closestDist = dist;
+                    closest = enemy.transform;
+                }
             }
             _combatTarget = closest;
+        }
+
+        private bool IsTargetDead(Transform target)
+        {
+            // Use SendMessage-style check: try to call IsDead on any component
+            // Works with BossController, BossDaiBangController, ChanTinhBossController, etc.
+            MonoBehaviour[] components = target.GetComponents<MonoBehaviour>();
+            foreach (MonoBehaviour comp in components)
+            {
+                System.Reflection.MethodInfo method = comp.GetType().GetMethod("IsDead", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (method != null && method.ReturnType == typeof(bool) && method.GetParameters().Length == 0)
+                {
+                    return (bool)method.Invoke(comp, null);
+                }
+            }
+            // If no IsDead method found, check if GameObject is active
+            return !target.gameObject.activeInHierarchy;
         }
 
         private void SnapFaceTarget(Vector3 targetPosition)

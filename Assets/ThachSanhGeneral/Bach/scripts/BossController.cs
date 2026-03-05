@@ -48,6 +48,17 @@ public class BossController : MonoBehaviour
     [Tooltip("Th?i gian hi?u ?ng damage")]
     public float damageFlashDuration = 0.1f;
 
+    [Header("Quest Integration")]
+    [Tooltip("Lo?i boss này là ai (dùng ?? l?u ti?n trình nhi?m v?)")]
+    public BossType bossType = BossType.None;
+
+    public enum BossType
+    {
+        None,
+        ChanTinh,
+        DaiBangTinh
+    }
+
     private BossState currentState = BossState.Idle;
     private float currentHealth;
     private NavMeshAgent agent;
@@ -332,6 +343,13 @@ public class BossController : MonoBehaviour
         Debug.Log("Boss died!");
         
         GetComponent<Collider>().enabled = false;
+
+        // L?u ti?n trình nhi?m v?
+        switch (bossType)
+        {
+            case BossType.ChanTinh:    QuestDialogue.MarkChanTinhDead();  break;
+            case BossType.DaiBangTinh: QuestDialogue.MarkDaiBangDead();   break;
+        }
         
         Destroy(gameObject, 5f);
     }

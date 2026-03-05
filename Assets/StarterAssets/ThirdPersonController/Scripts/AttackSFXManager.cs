@@ -45,6 +45,10 @@ namespace StarterAssets
         [Tooltip("Ice cracking sound (plays when ice emerges from ground at boss position)")]
         public AudioClip ultimateIceCrackingSFX;
 
+        [Header("Roll Sound Clip")]
+        [Tooltip("Sound for dodge roll (plays when roll animation starts)")]
+        public AudioClip rollSFX;
+
         [Header("Volume")]
         [Range(0f, 1f)]
         [Tooltip("Volume for slash sound effects")]
@@ -65,6 +69,10 @@ namespace StarterAssets
         [Range(0f, 1f)]
         [Tooltip("Volume for ice cracking effect")]
         public float ultimateIceCrackingVolume = 0.7f;
+
+        [Range(0f, 1f)]
+        [Tooltip("Volume for roll/dodge sound")]
+        public float rollVolume = 0.6f;
 
         [Header("Slash Timing Settings")]
         [Tooltip("Normalized time (0-1) in Attack 1 animation when slash sound plays")]
@@ -113,6 +121,11 @@ namespace StarterAssets
         [Range(0f, 1f)]
         public float ultimateIceCrackingPlayTime = 0.5f;
 
+        [Header("Roll Timing Settings")]
+        [Tooltip("Normalized time (0-1) in Roll animation when dodge sound plays")]
+        [Range(0f, 1f)]
+        public float rollPlayTime = 0.05f;
+
         [Header("Debug")]
         [Tooltip("Show debug logs when sounds play")]
         public bool showDebugLogs = false;
@@ -129,9 +142,11 @@ namespace StarterAssets
         private bool _ultimateVoicePlayed;
         private bool _ultimateAxeSlamPlayed;
         private bool _ultimateIceCrackingPlayed;
+        private bool _rollPlayed;
 
         private bool _eSkillStateEntered;
         private bool _ultimateStateEntered;
+        private bool _rollStateEntered;
 
         private void Start()
         {
@@ -313,6 +328,27 @@ namespace StarterAssets
                 _ultimateVoicePlayed = false;
                 _ultimateAxeSlamPlayed = false;
                 _ultimateIceCrackingPlayed = false;
+            }
+
+            // Roll
+            if (state.IsName("Roll"))
+            {
+                if (!_rollStateEntered)
+                {
+                    _rollStateEntered = true;
+                    _rollPlayed = false;
+                }
+
+                if (t >= rollPlayTime && !_rollPlayed)
+                {
+                    PlaySFX(rollSFX, "Roll", rollVolume);
+                    _rollPlayed = true;
+                }
+            }
+            else
+            {
+                _rollStateEntered = false;
+                _rollPlayed = false;
             }
         }
 

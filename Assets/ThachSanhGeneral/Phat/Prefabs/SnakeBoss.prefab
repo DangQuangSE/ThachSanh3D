@@ -605,7 +605,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0504b64b25de76645a828c2fca352022, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  maxHealth: 1000
+  maxHealth: 300
   attackRange: 3
   detectionRange: 15
   walkSpeed: 2
@@ -637,6 +637,9 @@ MonoBehaviour:
   swipeCooldown: 3
   punchCooldown: 2
   jumpAttackCooldown: 8
+  nextSceneName: Quest Scene
+  delayBeforeSceneChange: 5
+  bossType: 1
 --- !u!82 &3312356243047342011
 AudioSource:
   m_ObjectHideFlags: 0

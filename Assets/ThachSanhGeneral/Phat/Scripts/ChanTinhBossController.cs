@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 using System.Collections; // Required for Coroutine
 
 public class ChanTinhBossController : MonoBehaviour
@@ -91,6 +92,12 @@ public class ChanTinhBossController : MonoBehaviour
     private int hitHash; // Hit animation hash
 
     
+    [Header("Scene Transition")]
+    [Tooltip("Tên scene sẽ chuyển tới sau khi boss chết (phải được thêm vào Build Settings)")]
+    [SerializeField] private string nextSceneName;
+    [Tooltip("Thời gian chờ trước khi chuyển scene (giây)")]
+    [SerializeField] private float delayBeforeSceneChange = 5f;
+
     [Header("Quest Integration")]
     [Tooltip("What kind of boss is this?")]
     public BossType bossType = BossType.None;
@@ -413,8 +420,22 @@ public class ChanTinhBossController : MonoBehaviour
             case BossType.DaiBangTinh: QuestDialogue.MarkDaiBangDead(); break;
         }
 
-        // Destroy after 5 seconds
-        Destroy(gameObject, 5f);
+        // Chuyển scene sau khi boss chết, hoặc destroy nếu không set scene
+        if (!string.IsNullOrEmpty(nextSceneName))
+        {
+            StartCoroutine(LoadNextSceneAfterDelay());
+        }
+        else
+        {
+            Destroy(gameObject, 5f);
+        }
+    }
+
+    private IEnumerator LoadNextSceneAfterDelay()
+    {
+        yield return new WaitForSeconds(delayBeforeSceneChange);
+        Debug.Log($"Chuyển scene tới: {nextSceneName}");
+        SceneManager.LoadScene(nextSceneName);
     }
 
     public bool IsDead()

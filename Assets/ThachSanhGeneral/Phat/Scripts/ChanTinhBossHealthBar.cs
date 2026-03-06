@@ -14,10 +14,13 @@ public class ChanTinhBossHealthBar : MonoBehaviour
     public Text bossNameText;
 
     [Header("Settings")]
-    [Tooltip("Offset above boss")]
+    [Tooltip("If true, health bar will follow boss in world space. Set false for UI overlay.")]
+    public bool isWorldSpace = false;
+
+    [Tooltip("Offset above boss (only used if isWorldSpace is true)")]
     public Vector3 offset = new Vector3(0, 3f, 0);
 
-    [Tooltip("Always face camera")]
+    [Tooltip("Always face camera (only used if isWorldSpace is true)")]
     public bool billboardToCamera = true;
 
     [Header("Visual")]
@@ -38,33 +41,39 @@ public class ChanTinhBossHealthBar : MonoBehaviour
             boss = GetComponentInParent<ChanTinhBossController>();
         }
 
+        // Tự động tìm kiếm các tham chiếu UI nếu bạn quên kéo thả vào Inspector
+        if (healthSlider == null)
+        {
+            healthSlider = GetComponent<Slider>();
+        }
+
+        if (bossNameText == null)
+        {
+            Transform nameTransform = transform.Find("Boss Name");
+            if (nameTransform != null) bossNameText = nameTransform.GetComponent<Text>();
+        }
+
+        if (fillImage == null)
+        {
+            Transform fillTransform = transform.Find("Fill Area/Fill");
+            if (fillTransform != null) fillImage = fillTransform.GetComponent<Image>();
+        }
+
         if (boss == null)
         {
-            Debug.LogError("BossHealthBarWorld: No boss assigned!");
+            Debug.LogWarning("BossHealthBarWorld: No boss assigned! Try to find one...");
             enabled = false;
             return;
         }
 
-        if (bossNameText != null)
+        if (bossNameText != null && string.IsNullOrEmpty(bossNameText.text))
         {
-            bossNameText.text = "Boss";
+            bossNameText.text = "Chằn Tinh";
         }
 
-        // Setup default gradient if not set
-        if (healthColorGradient == null)
-        {
-            healthColorGradient = new Gradient();
-            GradientColorKey[] colorKeys = new GradientColorKey[3];
-            colorKeys[0] = new GradientColorKey(Color.red, 0f);
-            colorKeys[1] = new GradientColorKey(Color.yellow, 0.5f);
-            colorKeys[2] = new GradientColorKey(Color.green, 1f);
-
-            GradientAlphaKey[] alphaKeys = new GradientAlphaKey[2];
-            alphaKeys[0] = new GradientAlphaKey(1f, 0f);
-            alphaKeys[1] = new GradientAlphaKey(1f, 1f);
-
-            healthColorGradient.SetKeys(colorKeys, alphaKeys);
-        }
+        // Bỏ qua phần ghi đè healthColorGradient nếu inspector đang rỗng
+        // Vì hiện tại ta dùng fillImage.color tĩnh từ Editor thay vì dải gradient
+        // Nêu cần, hãy thiết lập gradient trực tiếp từ Inspector.
     }
 
     void Update()
@@ -75,13 +84,16 @@ public class ChanTinhBossHealthBar : MonoBehaviour
             return;
         }
 
-        // Update position
-        transform.position = boss.transform.position + offset;
-
-        // Billboard to camera
-        if (billboardToCamera && mainCamera != null)
+        if (isWorldSpace)
         {
-            transform.rotation = Quaternion.LookRotation(transform.position - mainCamera.transform.position);
+            // Update position
+            transform.position = boss.transform.position + offset;
+
+            // Billboard to camera
+            if (billboardToCamera && mainCamera != null)
+            {
+                transform.rotation = Quaternion.LookRotation(transform.position - mainCamera.transform.position);
+            }
         }
 
         // Update health bar
@@ -92,7 +104,8 @@ public class ChanTinhBossHealthBar : MonoBehaviour
             healthSlider.value = healthPercent;
         }
 
-        if (fillImage != null)
+        // Chỉ đổi màu theo Gradient nếu Gradient đã được thiết lập các keys
+        if (fillImage != null && healthColorGradient != null && healthColorGradient.colorKeys.Length > 0)
         {
             fillImage.color = healthColorGradient.Evaluate(healthPercent);
         }

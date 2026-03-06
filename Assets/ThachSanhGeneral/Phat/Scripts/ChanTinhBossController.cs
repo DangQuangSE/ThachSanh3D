@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 using System.Collections; // Required for Coroutine
 
 public class ChanTinhBossController : MonoBehaviour
@@ -48,6 +49,8 @@ public class ChanTinhBossController : MonoBehaviour
 
     [Header("Sound Effects")]
     [SerializeField] private AudioSource audioSource;
+    [Tooltip("Volume cho các Sound Effects chiến đấu (0-1)")]
+    [SerializeField] [Range(0f, 1f)] private float combatEffectsVolume = 1f;
     [SerializeField] private AudioClip punchSound;
     [SerializeField] private AudioClip swipeSound;
     [SerializeField] private AudioClip roarSound;
@@ -68,10 +71,10 @@ public class ChanTinhBossController : MonoBehaviour
     [SerializeField] private float runFootstepPitch = 1.1f;
 
     [Header("Attack Cooldowns")]
-    [SerializeField] private float roarCooldown = 10f; // Cooldown time for roar attack
-    [SerializeField] private float swipeCooldown = 3f;
-    [SerializeField] private float punchCooldown = 2f;
-    [SerializeField] private float jumpAttackCooldown = 8f;
+    [SerializeField] private float roarCooldown = 6f; // Cooldown time for roar attack (giảm từ 10f)
+    [SerializeField] private float swipeCooldown = 1.5f; // (giảm từ 3f)
+    [SerializeField] private float punchCooldown = 1f;   // (giảm từ 2f)
+    [SerializeField] private float jumpAttackCooldown = 5f; // (giảm từ 8f)
 
     private float lastAttackTime; // Time of the last attack performed
     private float currentCooldown; // Current cooldown of the ongoing attack
@@ -87,6 +90,24 @@ public class ChanTinhBossController : MonoBehaviour
     private int punchHash;
     private int jumpAttackHash;
     private int hitHash; // Hit animation hash
+
+    
+    [Header("Scene Transition")]
+    [Tooltip("Tên scene sẽ chuyển tới sau khi boss chết (phải được thêm vào Build Settings)")]
+    [SerializeField] private string nextSceneName;
+    [Tooltip("Thời gian chờ trước khi chuyển scene (giây)")]
+    [SerializeField] private float delayBeforeSceneChange = 5f;
+
+    [Header("Quest Integration")]
+    [Tooltip("What kind of boss is this?")]
+    public BossType bossType = BossType.None;
+
+    public enum BossType
+    {
+        None,
+        ChanTinh,
+        DaiBangTinh
+    }
 
     private enum BossState
     {
@@ -382,11 +403,39 @@ public class ChanTinhBossController : MonoBehaviour
 
         Debug.Log("Chan Tinh Boss died!");
 
+        // Dừng nhạc nền dần mượt mà khi boss chết
+        SceneBackgroundMusic bgm = FindObjectOfType<SceneBackgroundMusic>();
+        if (bgm != null)
+        {
+            bgm.FadeOut(3f); // Thời gian fade out (3 giây)
+        }
+
         // Disable collider to stop receiving damage
         GetComponent<Collider>().enabled = false;
 
-        // Destroy after 5 seconds
-        Destroy(gameObject, 5f);
+        //Save quest progress
+        switch (bossType)
+        {
+            case BossType.ChanTinh: QuestDialogue.MarkChanTinhDead(); break;
+            case BossType.DaiBangTinh: QuestDialogue.MarkDaiBangDead(); break;
+        }
+
+        // Chuyển scene sau khi boss chết, hoặc destroy nếu không set scene
+        if (!string.IsNullOrEmpty(nextSceneName))
+        {
+            StartCoroutine(LoadNextSceneAfterDelay());
+        }
+        else
+        {
+            Destroy(gameObject, 5f);
+        }
+    }
+
+    private IEnumerator LoadNextSceneAfterDelay()
+    {
+        yield return new WaitForSeconds(delayBeforeSceneChange);
+        Debug.Log($"Chuyển scene tới: {nextSceneName}");
+        SceneManager.LoadScene(nextSceneName);
     }
 
     public bool IsDead()
@@ -461,7 +510,7 @@ public class ChanTinhBossController : MonoBehaviour
     {
         if (audioSource != null && clip != null)
         {
-            audioSource.PlayOneShot(clip);
+            audioSource.PlayOneShot(clip, combatEffectsVolume);
         }
     }
 

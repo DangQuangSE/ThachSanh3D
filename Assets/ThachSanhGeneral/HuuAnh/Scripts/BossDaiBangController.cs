@@ -135,6 +135,8 @@ public class BossDaiBangController : MonoBehaviour
     private bool _playerFlashInProgress;
     private System.Collections.Generic.List<(Renderer r, int matIndex, string prop, Color original)> _playerNormalColorsCache;
     private bool _isInJumpAttack;
+    private Vector3 _jumpAttackTargetPos;
+    private CharacterController _playerCC;
 
     void Start()
     {
@@ -147,6 +149,7 @@ public class BossDaiBangController : MonoBehaviour
         {
             agent.speed = moveSpeed;
             agent.stoppingDistance = attackRange * 0.8f;
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
         }
 
         hasAnimator = TryGetComponent(out animator);
@@ -180,19 +183,21 @@ public class BossDaiBangController : MonoBehaviour
             }
         }
 
-        // Prevent boss collider from physically pushing the player's CharacterController
-        IgnorePlayerCollision();
-    }
+        // Cache player CharacterController for separation
+        if (target != null)
+            _playerCC = target.GetComponent<CharacterController>();
 
-    /// <summary>Disable physics collision between boss and player so NavMeshAgent does not push CharacterController.</summary>
-    private void IgnorePlayerCollision()
-    {
-        if (target == null) return;
+        // Ignore physics collision between boss collider and player collider/CC
+        // so NavMeshAgent position changes don't push CharacterController via physics
         Collider bossCol = GetComponent<Collider>();
-        Collider playerCol = target.GetComponent<Collider>();
-        if (bossCol != null && playerCol != null)
+        if (target != null && bossCol != null)
         {
-            Physics.IgnoreCollision(bossCol, playerCol);
+            Collider playerCol = target.GetComponent<Collider>();
+            if (playerCol != null)
+                Physics.IgnoreCollision(bossCol, playerCol);
+            // Also ignore the CharacterController collider (it IS a Collider)
+            if (_playerCC != null && _playerCC != playerCol)
+                Physics.IgnoreCollision(bossCol, _playerCC);
         }
     }
 
@@ -210,11 +215,107 @@ public class BossDaiBangController : MonoBehaviour
             CachePlayerNormalColors(target);
     }
 
+    void LateUpdate()
+    {
+        if (isDead) return;
+        EnforceSeparation();
+    }
+
     /// <summary>Play a one-shot SFX clip via the boss AudioSource (3D positioned). Null-safe.</summary>
     private void PlaySFX(AudioClip clip)
     {
         if (clip == null || _audioSource == null) return;
         _audioSource.PlayOneShot(clip, sfxVolume);
+    }
+
+    /// <summary>
+    /// Enforce minimum distance between boss and player every frame in LateUpdate.
+    /// When player is attacking, only the player is pushed back (boss stands firm).
+    /// When boss is chasing/moving, only the boss is pushed back (player stands firm).
+    /// Otherwise both are separated equally.
+    /// </summary>
+    private void EnforceSeparation()
+    {
+        if (target == null) return;
+
+        float minDist = 1.2f;
+
+        Vector3 bossPos = transform.position;
+        Vector3 playerPos = target.position;
+        Vector3 diff = new Vector3(bossPos.x - playerPos.x, 0f, bossPos.z - playerPos.z);
+        float dist = diff.magnitude;
+
+        if (dist >= minDist) return;
+
+        // Compute push direction (boss-to-player)
+        Vector3 pushDir;
+        if (dist > 0.01f)
+        {
+            pushDir = diff / dist;
+        }
+        else
+        {
+            pushDir = transform.forward;
+            pushDir.y = 0f;
+            pushDir = pushDir.normalized;
+            if (pushDir.sqrMagnitude < 0.001f) pushDir = Vector3.forward;
+        }
+
+        float overlap = minDist - dist;
+
+        // Determine who caused the overlap:
+        // If player is in an attack/skill animation ? player lunged into boss ? push only player
+        // If boss is actively chasing (agent moving) ? boss ran into player ? push only boss
+        // Otherwise ? split equally
+        bool playerIsAttacking = false;
+        Animator playerAnim = target.GetComponentInChildren<Animator>();
+        if (playerAnim != null)
+        {
+            AnimatorStateInfo pst = playerAnim.GetCurrentAnimatorStateInfo(0);
+            playerIsAttacking = pst.IsName("Attack_1") || pst.IsName("Attack_2") || pst.IsName("Attack_3")
+                             || pst.IsName("UntimateAttack") || pst.IsName("UntimateAttack_1")
+                             || pst.IsName("Attack360") || pst.IsName("Roll");
+        }
+
+        bool bossIsMoving = agent != null && agent.enabled && !agent.isStopped && agent.velocity.sqrMagnitude > 0.01f;
+
+        if (playerIsAttacking && !bossIsMoving)
+        {
+            // Player lunged into boss ? push only player back, boss stands firm
+            if (_playerCC != null && _playerCC.enabled)
+            {
+                Vector3 playerPush = -pushDir * overlap;
+                playerPush.y = 0f;
+                _playerCC.Move(playerPush);
+            }
+        }
+        else if (bossIsMoving && !playerIsAttacking)
+        {
+            // Boss ran into player ? push only boss back
+            Vector3 bossNewPos = bossPos + pushDir * overlap;
+            bossNewPos.y = bossPos.y;
+            transform.position = bossNewPos;
+            if (agent.isOnNavMesh)
+                agent.Warp(bossNewPos);
+        }
+        else
+        {
+            // Neither or both ? split equally
+            float halfPush = overlap * 0.5f;
+
+            Vector3 bossNewPos = bossPos + pushDir * halfPush;
+            bossNewPos.y = bossPos.y;
+            transform.position = bossNewPos;
+            if (agent != null && agent.enabled && agent.isOnNavMesh)
+                agent.Warp(bossNewPos);
+
+            if (_playerCC != null && _playerCC.enabled)
+            {
+                Vector3 playerPush = -pushDir * halfPush;
+                playerPush.y = 0f;
+                _playerCC.Move(playerPush);
+            }
+        }
     }
 
     private const string BaseColorProp = "_BaseColor";
@@ -455,6 +556,10 @@ public class BossDaiBangController : MonoBehaviour
     {
         if (target == null) return;
 
+        // Lock state while any attack animation is playing — boss finishes attack before transitioning
+        if (currentState == BossState.Attack && IsInAnyAttackAnimation())
+            return;
+
         float distanceToTarget = Vector3.Distance(transform.position, target.position);
         float distanceFromSpawn = Vector3.Distance(transform.position, spawnPosition);
 
@@ -539,12 +644,16 @@ public class BossDaiBangController : MonoBehaviour
         if (Time.time < _roarLockUntil)
             return;
 
-        Vector3 direction = (target.position - transform.position).normalized;
-        direction.y = 0;
-        if (direction != Vector3.zero)
+        // Only rotate toward player when NOT in any attack animation
+        if (!IsInAnyAttackAnimation())
         {
-            Quaternion lookRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 10f);
+            Vector3 direction = (target.position - transform.position).normalized;
+            direction.y = 0;
+            if (direction != Vector3.zero)
+            {
+                Quaternion lookRotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), Time.deltaTime * 10f);
+                transform.rotation = lookRotation;
+            }
         }
 
         if (Time.time >= lastAttackTime + attackCooldown)
@@ -552,6 +661,16 @@ public class BossDaiBangController : MonoBehaviour
             lastAttackTime = Time.time;
             PerformAttack();
         }
+    }
+
+    /// <summary>Returns true if the boss animator is currently in any attack/skill state.</summary>
+    private bool IsInAnyAttackAnimation()
+    {
+        if (!hasAnimator) return false;
+        AnimatorStateInfo st = animator.GetCurrentAnimatorStateInfo(0);
+        return st.IsName("Punch") || st.IsName("Uppercut") || st.IsName("JumpAttack") ||
+               st.IsName("MagicAttack") || st.IsName("Mutant Roaring") ||
+               st.IsName("MutantRoaring") || st.IsName("Roar");
     }
 
     /// <summary>Fixed attack rotation: Punch x2 -> Uppercut -> Jump Attack -> Fireball (MagicAttack) -> Mutant Roaring, then loops.</summary>
@@ -760,8 +879,8 @@ public class BossDaiBangController : MonoBehaviour
     }
 
     /// <summary>
-    /// During JumpAttack, disable NavMeshAgent.updatePosition so Root Motion controls the boss.
-    /// When JumpAttack ends, Warp the agent to the landing position to prevent snap-back.
+    /// During JumpAttack, disable NavMeshAgent so Root Motion controls the boss.
+    /// Clamp horizontal movement so boss lands near player instead of passing through.
     /// </summary>
     private void SyncJumpAttackRootMotion()
     {
@@ -772,23 +891,45 @@ public class BossDaiBangController : MonoBehaviour
 
         if (inJumpAttack && !_isInJumpAttack)
         {
-            // Entering JumpAttack: let Root Motion drive position
+            // Entering JumpAttack: snapshot target position and let Root Motion drive
             _isInJumpAttack = true;
+            _jumpAttackTargetPos = target != null ? target.position : transform.position + transform.forward * 3f;
             agent.updatePosition = false;
             agent.updateRotation = false;
         }
         else if (!inJumpAttack && _isInJumpAttack)
         {
-            // Exiting JumpAttack: sync agent to current (landed) position
+            // Exiting JumpAttack: sync agent to landed position
             _isInJumpAttack = false;
             agent.Warp(transform.position);
             agent.updatePosition = true;
             agent.updateRotation = true;
         }
 
-        // While in JumpAttack, keep agent nextPosition synced to prevent drift
         if (_isInJumpAttack)
         {
+            // Clamp: stop horizontal root motion when boss is close enough to player
+            float distToTarget = Vector3.Distance(
+                new Vector3(transform.position.x, 0f, transform.position.z),
+                new Vector3(_jumpAttackTargetPos.x, 0f, _jumpAttackTargetPos.z));
+
+            float stopDistance = attackRadius * 1.2f;
+            if (distToTarget <= stopDistance)
+            {
+                // Freeze XZ position, allow only Y (jump arc) from root motion
+                Vector3 frozenPos = transform.position;
+                Vector3 toTarget = _jumpAttackTargetPos - frozenPos;
+                toTarget.y = 0f;
+                // Push boss back to edge of stop zone facing target
+                if (toTarget.magnitude > 0.01f)
+                {
+                    Vector3 stopPos = _jumpAttackTargetPos - toTarget.normalized * stopDistance;
+                    frozenPos.x = stopPos.x;
+                    frozenPos.z = stopPos.z;
+                    transform.position = frozenPos;
+                }
+            }
+
             agent.nextPosition = transform.position;
         }
     }

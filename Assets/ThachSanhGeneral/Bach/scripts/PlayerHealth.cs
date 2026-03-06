@@ -21,17 +21,6 @@ public class PlayerHealth : MonoBehaviour
     
     [Tooltip("Duration of damage flash effect")]
     public float damageFlashDuration = 0.1f;
-
-    [Header("Sound Effects")]
-    [Tooltip("Sound when player takes damage (leave empty to skip)")]
-    public AudioClip hurtSFX;
-
-    [Range(0f, 1f)]
-    [Tooltip("Volume for hurt sound effect")]
-    public float hurtVolume = 0.8f;
-
-    [Tooltip("Minimum time between hurt sounds to prevent spam")]
-    public float hurtSFXCooldown = 0.5f;
     
     [Header("Death Settings")]
     [Tooltip("Respawn delay after death")]
@@ -45,7 +34,6 @@ public class PlayerHealth : MonoBehaviour
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
     private Animator _animator;
-    private float _lastHurtSFXTime;
     
     // Must match the Bool parameter name in Animator exactly
     private static readonly int AnimIDDead = Animator.StringToHash("Dead");
@@ -80,13 +68,6 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = Mathf.Max(currentHealth, 0);
         
         Debug.Log($"Player took {damage} damage. Health: {currentHealth}/{maxHealth}");
-        
-        // Play hurt SFX with cooldown
-        if (hurtSFX != null && Time.time - _lastHurtSFXTime >= hurtSFXCooldown)
-        {
-            AudioSource.PlayClipAtPoint(hurtSFX, transform.position, hurtVolume);
-            _lastHurtSFXTime = Time.time;
-        }
         
         // Visual feedback
         StartCoroutine(DamageFlash());

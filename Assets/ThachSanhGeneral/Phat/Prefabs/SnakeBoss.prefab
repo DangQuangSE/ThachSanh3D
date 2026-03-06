@@ -773,31 +773,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 4.40771
+      value: -3.5
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.13424
+      value: 11.32
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 2.52156
+      value: -13.08
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.2994584
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: -0.95410943
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -805,7 +805,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: -145.15
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2850d6991dfd52e4aae634023897670f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
@@ -1254,6 +1254,7 @@ MonoBehaviour:
   damageFlashDuration: 0.5
   vfxController: {fileID: 1585140282101017243}
   audioSource: {fileID: 3312356243047342011}
+  combatEffectsVolume: 0.2
   punchSound: {fileID: 8300000, guid: 2ef9a0e5566a25646b4c457bffeedf4c, type: 3}
   swipeSound: {fileID: 8300000, guid: 2ef9a0e5566a25646b4c457bffeedf4c, type: 3}
   roarSound: {fileID: 8300000, guid: 737b7bd78f4466d49afaa4de8272d7d9, type: 3}
@@ -1262,8 +1263,8 @@ MonoBehaviour:
   flexingSound: {fileID: 8300000, guid: 8f1fa10eb79ac644798bbda7c4acecc2, type: 3}
   dieSound: {fileID: 8300000, guid: 37934a1493ca73a4c81fbe067b00945f, type: 3}
   footstepSound: {fileID: 8300000, guid: 3f38d4a495669ef41ac43bc8f25468d2, type: 3}
-  walkFootstepVolume: 0.4
-  runFootstepVolume: 0.7
+  walkFootstepVolume: 0.05
+  runFootstepVolume: 0.1
   walkFootstepPitch: 0.9
   runFootstepPitch: 1.1
   roarCooldown: 10

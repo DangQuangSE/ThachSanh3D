@@ -48,6 +48,8 @@ public class ChanTinhBossController : MonoBehaviour
 
     [Header("Sound Effects")]
     [SerializeField] private AudioSource audioSource;
+    [Tooltip("Volume cho các Sound Effects chiến đấu (0-1)")]
+    [SerializeField] [Range(0f, 1f)] private float combatEffectsVolume = 1f;
     [SerializeField] private AudioClip punchSound;
     [SerializeField] private AudioClip swipeSound;
     [SerializeField] private AudioClip roarSound;
@@ -382,6 +384,13 @@ public class ChanTinhBossController : MonoBehaviour
 
         Debug.Log("Chan Tinh Boss died!");
 
+        // Dừng nhạc nền dần mượt mà khi boss chết
+        SceneBackgroundMusic bgm = FindObjectOfType<SceneBackgroundMusic>();
+        if (bgm != null)
+        {
+            bgm.FadeOut(3f); // Thời gian fade out (3 giây)
+        }
+
         // Disable collider to stop receiving damage
         GetComponent<Collider>().enabled = false;
 
@@ -461,7 +470,7 @@ public class ChanTinhBossController : MonoBehaviour
     {
         if (audioSource != null && clip != null)
         {
-            audioSource.PlayOneShot(clip);
+            audioSource.PlayOneShot(clip, combatEffectsVolume);
         }
     }
 

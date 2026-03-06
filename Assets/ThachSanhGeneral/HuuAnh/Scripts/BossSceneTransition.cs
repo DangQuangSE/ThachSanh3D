@@ -55,6 +55,10 @@ public class BossSceneTransition : MonoBehaviour
     [Range(0f, 1f)]
     public float typewriterVolume = 0.15f;
 
+    [Tooltip("Tốc độ gõ chữ (giây/ký tự)")]
+    [Range(0.01f, 0.2f)]
+    public float typewriterSpeed = 0.06f;
+
     [Header("References")]
     [Tooltip("Auto-find BossDaiBangController if not assigned")]
     public BossDaiBangController bossDaiBang;
@@ -270,7 +274,9 @@ public class BossSceneTransition : MonoBehaviour
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
             
+            DisablePlayerInput();
             yield return StartCoroutine(PlayDialogueSequence());
+            ResetPlayerInput();
         }
         else
         {
@@ -305,7 +311,10 @@ public class BossSceneTransition : MonoBehaviour
         // Ensure cursor is visible and unlocked before scene transition
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
-        DebugLog("Cursor unlocked and visible");
+        
+        // Setup time scale back to normal before loading next scene
+        Time.timeScale = 1f;
+        DebugLog("Cursor unlocked, timeScale reset to 1");
 
         // Check if scene name is empty
         if (string.IsNullOrEmpty(nextSceneName))
@@ -380,6 +389,9 @@ public class BossSceneTransition : MonoBehaviour
         // Add a short delay after boss dies before dialogue starts
         yield return new WaitForSeconds(2f);
 
+        // FREEZE THE GAMEPLAY
+        Time.timeScale = 0f;
+
         // Hide victory panel if it's there so dialogue is clean
         if (victoryPanel != null) victoryPanel.SetActive(false);
 
@@ -394,97 +406,92 @@ public class BossSceneTransition : MonoBehaviour
         var scaler = canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
         scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight = 0.5f; // Ensures proportions are kept better across aspects
         canvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
 
         // FULL SCREEN DIMMED BACKGROUND (Optional, but helps focus)
         GameObject bgObj = new GameObject("DimBackground");
         bgObj.transform.SetParent(canvasObj.transform, false);
         UnityEngine.UI.Image bgImg = bgObj.AddComponent<UnityEngine.UI.Image>();
-        bgImg.color = new Color(0, 0, 0, 0.3f);
+        bgImg.color = new Color(0, 0, 0, 0.4f);
         RectTransform bgRect = bgObj.GetComponent<RectTransform>();
         bgRect.anchorMin = Vector2.zero;
         bgRect.anchorMax = Vector2.one;
-        bgRect.offsetMin = Vector2.zero;
-        bgRect.offsetMax = Vector2.zero;
+        bgRect.sizeDelta = Vector2.zero;
+        bgRect.anchoredPosition = Vector2.zero;
 
-        // WHITE PANEL
+        // WHITE PANEL -> Fullscreen background
         GameObject whitePanelObj = new GameObject("WhitePanel");
         whitePanelObj.transform.SetParent(canvasObj.transform, false);
         UnityEngine.UI.Image whiteImg = whitePanelObj.AddComponent<UnityEngine.UI.Image>();
-        whiteImg.color = Color.white;
+        whiteImg.color = new Color(0.05f, 0.05f, 0.08f, 1f); // Dark elegant fully-opaque background
+        
         RectTransform whiteRect = whitePanelObj.GetComponent<RectTransform>();
-        // Make it large, covering most of the screen like the image
-        whiteRect.anchorMin = new Vector2(0.05f, 0.05f);
-        whiteRect.anchorMax = new Vector2(0.95f, 0.95f);
-        whiteRect.offsetMin = Vector2.zero;
-        whiteRect.offsetMax = Vector2.zero;
-
-        // LIGHT YELLOW INNER BOX
-        GameObject yellowBoxObj = new GameObject("YellowBox");
-        yellowBoxObj.transform.SetParent(whitePanelObj.transform, false);
-        UnityEngine.UI.Image yellowImg = yellowBoxObj.AddComponent<UnityEngine.UI.Image>();
-        yellowImg.color = new Color(0.99f, 0.98f, 0.88f, 1f); // Pale yellow
-        UnityEngine.UI.Outline outline1 = yellowBoxObj.AddComponent<UnityEngine.UI.Outline>();
-        outline1.effectColor = new Color(0.7f, 0.7f, 0.7f, 1f);
-        outline1.effectDistance = new Vector2(2, -2);
-        RectTransform yellowRect = yellowBoxObj.GetComponent<RectTransform>();
-        yellowRect.anchorMin = new Vector2(0.03f, 0.15f);
-        yellowRect.anchorMax = new Vector2(0.97f, 0.85f);
-        yellowRect.offsetMin = Vector2.zero;
-        yellowRect.offsetMax = Vector2.zero;
+        whiteRect.anchorMin = Vector2.zero;
+        whiteRect.anchorMax = Vector2.one;
+        whiteRect.sizeDelta = Vector2.zero;
+        whiteRect.anchoredPosition = Vector2.zero;
 
         // Try getting a font mapping to standard fonts
         Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (uiFont == null) uiFont = Resources.Load<Font>("Arial");
-        if (uiFont == null) uiFont = Font.CreateDynamicFontFromOSFont("Arial", 38);
+        if (uiFont == null) uiFont = Font.CreateDynamicFontFromOSFont("Arial", 45);
+
+        // CREATE SPEAKER NAME TEXT
+        GameObject nameObj = new GameObject("SpeakerNameText");
+        nameObj.transform.SetParent(whitePanelObj.transform, false);
+        UnityEngine.UI.Text nameText = nameObj.AddComponent<UnityEngine.UI.Text>();
+        nameText.font = uiFont;
+        nameText.fontSize = 75;
+        nameText.fontStyle = FontStyle.Bold;
+        nameText.alignment = TextAnchor.MiddleCenter;
+        RectTransform nameRect = nameObj.GetComponent<RectTransform>();
+        nameRect.anchorMin = new Vector2(0f, 0.7f);
+        nameRect.anchorMax = new Vector2(1f, 0.9f); // Top part of the screen
+        nameRect.offsetMin = Vector2.zero;
+        nameRect.offsetMax = Vector2.zero;
 
         // CREATE MESSAGE TEXT
         GameObject msgObj = new GameObject("MessageText");
-        msgObj.transform.SetParent(yellowBoxObj.transform, false);
+        msgObj.transform.SetParent(whitePanelObj.transform, false);
         UnityEngine.UI.Text msgText = msgObj.AddComponent<UnityEngine.UI.Text>();
         msgText.font = uiFont;
-        msgText.fontSize = 45;
-        msgText.color = new Color(0.4f, 0.4f, 0.4f, 1f); // Dark gray text like in the image
-        msgText.alignment = TextAnchor.UpperLeft;
+        msgText.fontSize = 60;
+        msgText.lineSpacing = 1.3f;
+        msgText.color = new Color(0.9f, 0.9f, 0.9f, 1f); 
+        msgText.alignment = TextAnchor.MiddleCenter;
         msgText.horizontalOverflow = HorizontalWrapMode.Wrap;
         msgText.verticalOverflow = VerticalWrapMode.Truncate;
         msgText.supportRichText = true;
+        
+        // Add subtle drop shadow to text for readability
+        UnityEngine.UI.Shadow textShadow = msgObj.AddComponent<UnityEngine.UI.Shadow>();
+        textShadow.effectColor = Color.black;
+        textShadow.effectDistance = new Vector2(2, -2);
+        
         RectTransform msgRect = msgObj.GetComponent<RectTransform>();
-        msgRect.anchorMin = new Vector2(0.02f, 0.05f);
-        msgRect.anchorMax = new Vector2(0.98f, 0.95f);
-        msgRect.offsetMin = Vector2.zero;
+        msgRect.anchorMin = new Vector2(0.1f, 0.2f);
+        msgRect.anchorMax = new Vector2(0.9f, 0.7f); // Center part of the screen
+        msgRect.offsetMin = Vector2.zero; 
         msgRect.offsetMax = Vector2.zero;
 
-        // CREATE "TIẾP TỤC" BUTTON
-        GameObject btnObj = new GameObject("ContinueButton");
+        // CREATE "TIẾP TỤC" PROMPT (Simple blinking or subtle text at bottom right instead of a clunky box)
+        GameObject btnObj = new GameObject("ContinuePrompt");
         btnObj.transform.SetParent(whitePanelObj.transform, false);
-        UnityEngine.UI.Image btnImg = btnObj.AddComponent<UnityEngine.UI.Image>();
-        btnImg.color = new Color(0.95f, 0.95f, 0.95f, 1f);
-        UnityEngine.UI.Outline outline2 = btnObj.AddComponent<UnityEngine.UI.Outline>();
-        outline2.effectColor = new Color(0.6f, 0.6f, 0.6f, 1f);
-        outline2.effectDistance = new Vector2(1, -1);
+        UnityEngine.UI.Text btnTextRef = btnObj.AddComponent<UnityEngine.UI.Text>();
+        btnTextRef.font = uiFont;
+        btnTextRef.fontSize = 40;
+        btnTextRef.fontStyle = FontStyle.Italic;
+        btnTextRef.color = new Color(1f, 1f, 1f, 0.6f);
+        btnTextRef.alignment = TextAnchor.LowerRight;
+        btnTextRef.text = "Nhấn [Chuột trái] hoặc [Space] ⯈";
         RectTransform btnRect = btnObj.GetComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.85f, 0.02f);
-        btnRect.anchorMax = new Vector2(0.98f, 0.12f);
+        btnRect.anchorMin = new Vector2(0.7f, 0.05f);
+        btnRect.anchorMax = new Vector2(0.95f, 0.15f);
         btnRect.offsetMin = Vector2.zero;
         btnRect.offsetMax = Vector2.zero;
 
-        // BUTTON TEXT
-        GameObject btnTxtObj = new GameObject("BtnText");
-        btnTxtObj.transform.SetParent(btnObj.transform, false);
-        UnityEngine.UI.Text btnTextRef = btnTxtObj.AddComponent<UnityEngine.UI.Text>();
-        btnTextRef.font = uiFont;
-        btnTextRef.fontSize = 35;
-        btnTextRef.color = new Color(0.4f, 0.4f, 0.4f, 1f);
-        btnTextRef.alignment = TextAnchor.MiddleCenter;
-        btnTextRef.text = "Tiếp Tục";
-        RectTransform btnTxtRect = btnTxtObj.GetComponent<RectTransform>();
-        btnTxtRect.anchorMin = Vector2.zero;
-        btnTxtRect.anchorMax = Vector2.one;
-        btnTxtRect.offsetMin = Vector2.zero;
-        btnTxtRect.offsetMax = Vector2.zero;
-
-        // Toggles visibility of "Tiếp Tục" button
+        // Toggles visibility of Continue prompt
         btnObj.SetActive(false);
 
         foreach (var line in betrayalDialogue)
@@ -494,6 +501,7 @@ public class BossSceneTransition : MonoBehaviour
             
             if (isStory) 
             {
+                nameText.text = "";
                 msgText.fontStyle = FontStyle.Italic;
                 msgText.alignment = TextAnchor.MiddleCenter;
                 
@@ -501,45 +509,40 @@ public class BossSceneTransition : MonoBehaviour
                 {
                     // Special styling for "Còn tiếp"
                     msgText.alignment = TextAnchor.MiddleCenter;
-                    msgText.fontSize = 65;
+                    msgText.fontSize = 85;
                     msgText.fontStyle = FontStyle.Bold;
-                    msgText.color = new Color(0.8f, 0.2f, 0.2f); // Reddish for "To be continued"
+                    msgText.color = new Color(0.9f, 0.3f, 0.3f); // Reddish for "To be continued"
                 }
                 else
                 {
-                    msgText.fontSize = 45;
+                    msgText.fontSize = 60;
+                    msgText.color = new Color(0.7f, 0.8f, 0.9f);
                 }
             }
             else
             {
+                // Format speaker name
+                string colorHex = line.speaker == "Thạch Sanh" ? "#4D94FF" : "#FF4D4D"; // Bright Blue vs Bright Red for dark background
+                nameText.text = $"<color={colorHex}>{line.speaker}</color>";
+                
                 msgText.fontStyle = FontStyle.Normal;
-                msgText.alignment = TextAnchor.UpperLeft;
-                msgText.fontSize = 45;
-                msgText.color = new Color(0.4f, 0.4f, 0.4f, 1f);
+                msgText.alignment = TextAnchor.MiddleCenter;
+                msgText.fontSize = 60;
+                msgText.color = new Color(0.95f, 0.95f, 0.95f, 1f);
             }
 
             msgText.text = "";
-
-            // Format speaker text (bold and maybe colored) if it has a speaker
-            string preText = "";
-            if (!isStory)
-            {
-                string colorHex = line.speaker == "Thạch Sanh" ? "#2B6BB2" : "#B22B2B"; // Blue vs Red
-                // Or just bold dark gray: #444
-                preText = $"<color={colorHex}><b>{line.speaker}:</b></color>\n\n";
-                msgText.text = preText;
-            }
 
             // Play voice audio for this line (if assigned)
             PlayLineAudio(line.voiceClip);
 
             // Typewriter effect
-            float defaultCharTime = 0.03f;
             for (int i = 0; i < line.message.Length; i++)
             {
                 if (CheckSkipInput())
                 {
-                    msgText.text = preText + line.message;
+                    // For skipping
+                    msgText.text = line.message;
                     yield return null;
                     break;
                 }
@@ -549,7 +552,7 @@ public class BossSceneTransition : MonoBehaviour
                 // Play typewriter sound effect
                 PlayTypewriterSound();
                 
-                yield return new WaitForSeconds(defaultCharTime);
+                yield return new WaitForSecondsRealtime(typewriterSpeed);
             }
 
             // Show "Tiếp tục" button after typing finishes
@@ -568,12 +571,12 @@ public class BossSceneTransition : MonoBehaviour
             }
 
             // Chờ tương tác người dùng
-            yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSecondsRealtime(0.2f);
             float waitTime = Mathf.Max(2f, line.message.Length * 0.05f);
             float elapsed = 0f;
             while (elapsed < waitTime)
             {
-                elapsed += Time.deltaTime;
+                elapsed += Time.unscaledDeltaTime;
                 if (CheckSkipInput())
                 {
                     StopLineAudio();
@@ -583,7 +586,7 @@ public class BossSceneTransition : MonoBehaviour
                 yield return null;
             }
             
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSecondsRealtime(0.1f);
         }
 
         // Stop all audio when dialogue ends
@@ -688,6 +691,8 @@ public class BossSceneTransition : MonoBehaviour
     {
         DebugLog("TransitionImmediately() called");
         
+        Time.timeScale = 1f;
+
         if (!string.IsNullOrEmpty(nextSceneName))
         {
             Debug.Log($"<color=cyan>[IMMEDIATE] Loading scene: {nextSceneName}</color>");
@@ -700,6 +705,39 @@ public class BossSceneTransition : MonoBehaviour
     }
 
     /// <summary>
+    /// Check if player wants to skip dialogue (Space, Enter, Mouse Click, or Gamepad Button)
+    /// </summary>
+    private bool CheckSkipInput()
+    {
+#if ENABLE_INPUT_SYSTEM
+        // New Input System
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.spaceKey.wasPressedThisFrame || 
+                Keyboard.current.enterKey.wasPressedThisFrame)
+                return true;
+        }
+        
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            return true;
+        
+        if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame)
+            return true;
+#else
+        // Legacy Input System
+        if (Input.GetKeyDown(KeyCode.Space) || 
+            Input.GetKeyDown(KeyCode.Return) || 
+            Input.GetKeyDown(KeyCode.KeypadEnter))
+            return true;
+        
+        if (Input.GetMouseButtonDown(0))
+            return true;
+#endif
+        
+        return false;
+    }
+
+    /// <summary>
     /// Helper for togglable debug logs
     /// </summary>
     private void DebugLog(string message)
@@ -707,6 +745,36 @@ public class BossSceneTransition : MonoBehaviour
         if (enableDebugLogs)
         {
             Debug.Log($"[BossSceneTransition] {message}");
+        }
+    }
+
+    private void OnEnable()
+    {
+    }
+
+    private void DisablePlayerInput()
+    {
+        // Try finding player and disabling the script that causes attack
+        MonoBehaviour[] scripts = FindObjectsOfType<MonoBehaviour>();
+        foreach(var script in scripts)
+        {
+            if (script.GetType().Name == "PlayerAttack" || script.GetType().Name == "PlayerInput" || script.GetType().Name.Contains("ThirdPersonUserControl"))
+            {
+                script.enabled = false;
+                DebugLog($"Disabled Player script: {script.GetType().Name} during dialogue.");
+            }
+        }
+    }
+
+    private void ResetPlayerInput()
+    {
+        MonoBehaviour[] scripts = FindObjectsOfType<MonoBehaviour>(true);
+        foreach(var script in scripts)
+        {
+            if (script.GetType().Name == "PlayerAttack" || script.GetType().Name == "PlayerInput" || script.GetType().Name.Contains("ThirdPersonUserControl"))
+            {
+                script.enabled = true;
+            }
         }
     }
 

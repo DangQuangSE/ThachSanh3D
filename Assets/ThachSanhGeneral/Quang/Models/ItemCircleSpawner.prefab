@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemCircleSpawner
   minSpawnDistance: 5
-  maxSpawnDistance: 15
+  maxSpawnDistance: 8
   spawnInterval: 30
   maxCirclesOnMap: 3
   initialDelay: 10
@@ -61,9 +61,9 @@ MonoBehaviour:
   damageBoostCirclePrefab: {fileID: 3377181292992421420, guid: 48c5715f9603c3842a353516a8baefbb, type: 3}
   healingVFXPrefab: {fileID: 0}
   damageBoostVFXPrefab: {fileID: 0}
-  spawnSFX: {fileID: 0}
+  spawnSFX: {fileID: 8300000, guid: 83c4805fd04ec7441a796a395bcccda9, type: 3}
   spawnVolume: 0.5
-  activationSFX: {fileID: 0}
+  activationSFX: {fileID: 8300000, guid: 83c4805fd04ec7441a796a395bcccda9, type: 3}
   activationVolume: 0.8
   groundLayer:
     serializedVersion: 2

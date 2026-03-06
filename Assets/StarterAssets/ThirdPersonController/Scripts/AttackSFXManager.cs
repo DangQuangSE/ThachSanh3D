@@ -147,6 +147,7 @@ namespace StarterAssets
         private bool _eSkillStateEntered;
         private bool _ultimateStateEntered;
         private bool _rollStateEntered;
+        private bool _suppressAttackSFX;
 
         private void Start()
         {
@@ -165,8 +166,41 @@ namespace StarterAssets
             AnimatorStateInfo state = _animator.GetCurrentAnimatorStateInfo(0);
             float t = state.normalizedTime % 1f;
 
+            // Check if we should suppress Attack 1/2/3 sounds:
+            // 1. Currently in Ultimate state
+            // 2. Transitioning TO Ultimate state
+            // 3. Transitioning FROM an attack state to ANY non-attack state (Ultimate, ESkill, Protect, Roll, etc.)
+            bool isUltimateActive = state.IsName("UntimateAttack_1");
+            bool isTransitioning = _animator.IsInTransition(0);
+            
+            if (isTransitioning)
+            {
+                AnimatorStateInfo nextState = _animator.GetNextAnimatorStateInfo(0);
+                bool nextIsAttack = nextState.IsName("Attack_1") || nextState.IsName("Attack_2") || nextState.IsName("Attack_3");
+                
+                if (nextState.IsName("UntimateAttack_1"))
+                {
+                    isUltimateActive = true;
+                }
+                
+                // If transitioning FROM an attack state to anything that isn't another attack, suppress attack sounds
+                bool currentIsAttack = state.IsName("Attack_1") || state.IsName("Attack_2") || state.IsName("Attack_3");
+                if (currentIsAttack && !nextIsAttack)
+                {
+                    _suppressAttackSFX = true;
+                }
+            }
+            
+            // Reset suppress flag when no longer in attack state and not transitioning
+            if (!state.IsName("Attack_1") && !state.IsName("Attack_2") && !state.IsName("Attack_3") && !isTransitioning)
+            {
+                _suppressAttackSFX = false;
+            }
+            
+            bool skipAttackSounds = isUltimateActive || _suppressAttackSFX;
+
             // Attack 1
-            if (state.IsName("Attack_1"))
+            if (state.IsName("Attack_1") && !skipAttackSounds)
             {
                 // Voice
                 if (t >= attack1VoicePlayTime && !_attack1VoicePlayed)
@@ -197,7 +231,7 @@ namespace StarterAssets
             }
 
             // Attack 2
-            if (state.IsName("Attack_2"))
+            if (state.IsName("Attack_2") && !skipAttackSounds)
             {
                 // Voice
                 if (t >= attack2VoicePlayTime && !_attack2VoicePlayed)
@@ -228,7 +262,7 @@ namespace StarterAssets
             }
 
             // Attack 3
-            if (state.IsName("Attack_3"))
+            if (state.IsName("Attack_3") && !skipAttackSounds)
             {
                 // Voice
                 if (t >= attack3VoicePlayTime && !_attack3VoicePlayed)
@@ -290,8 +324,8 @@ namespace StarterAssets
                 _eSkillVoicePlayed = false;
             }
 
-            // Ultimate Skill (UntimateAttack / UntimateAttack_1)
-            if (state.IsName("UntimateAttack") || state.IsName("UntimateAttack_1"))
+            // Ultimate Skill (UntimateAttack_1)
+            if (state.IsName("UntimateAttack_1"))
             {
                 if (!_ultimateStateEntered)
                 {

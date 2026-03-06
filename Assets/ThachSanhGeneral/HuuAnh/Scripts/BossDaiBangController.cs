@@ -18,7 +18,16 @@ public class BossDaiBangController : MonoBehaviour
         Attack,
         Death
     }
+    [Header("Quest Integration")]
+    [Tooltip("Which boss type this is (used to save quest progress)")]
+    public BossType bossType = BossType.None;
 
+    public enum BossType
+    {
+        None,
+        ChanTinh,
+        DaiBangTinh
+    }
     [Header("Boss Stats")]
     public float maxHealth = 1000f;
     public float attackDamage = 30f;
@@ -868,7 +877,17 @@ public class BossDaiBangController : MonoBehaviour
         if (agent != null) { agent.isStopped = true; agent.enabled = false; }
         if (hasAnimator) animator.SetTrigger(AnimIDDie);
         if (TryGetComponent<Collider>(out var col)) col.enabled = false;
-        Destroy(gameObject, 5f);
+
+
+        // Save quest progress
+        switch (bossType)
+        {
+            case BossType.ChanTinh: QuestDialogue.MarkChanTinhDead(); break;
+            case BossType.DaiBangTinh: QuestDialogue.MarkDaiBangDead(); break;
+        }
+
+
+        Destroy(gameObject, 8f);
     }
 
     private void UpdateAnimator()

@@ -114,9 +114,12 @@ public class QuestDialogue : MonoBehaviour
 
     private readonly string[] _allDoneLines =
     {
-        "Ng??i ?ã hoàn thành s? m?nh, Th?ch Sanh.",
-        "Ch?n Tinh và ??i Bàng Tinh ??u ?ã b? tiêu di?t.",
-        "??t n??c mãi mãi ghi ?n ng??i anh hùng!"
+       "Thạch Sanh: Anh Lý Thông ơi! Tôi đã hạ được Đại Bàng tinh và cứu được công chúa rồi. Hãy thả dây xuống đưa nàng lên trước!",
+      "Lý Thông: Hiền đệ giỏi lắm! Mau buộc dây vào người công chúa, ta sẽ kéo nàng lên ngay. Đất nước mãi mãi ghi ơn người anh hùng!",
+      "Thạch Sanh: Công chúa đã an toàn chưa anh? Giờ hãy thả dây xuống cho tôi nhé!",
+      "Lý Thông: Thạch Sanh à, đệ làm rất tốt. Chằn Tinh và Đại Bàng Tinh đều đã bị tiêu diệt. Nhưng công lao này, một mình ta hưởng là đủ rồi!",
+      "Lý Thông: Quân đâu! Mau lăn đá lấp kín cửa hang lại. Ta phải về triều báo tin vui là chính ta đã diệt quái vật cứu công chúa.",
+      "Thạch Sanh: Lý Thông... tại sao anh lại đối xử với tôi như vậy..."
     };
 
     // ?????????????????????????????????????????????????????????????????????

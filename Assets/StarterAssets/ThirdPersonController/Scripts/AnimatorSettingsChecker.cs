@@ -109,7 +109,7 @@ namespace StarterAssets
             var layer = controller.layers[0];
             var stateMachine = layer.stateMachine;
 
-            string[] requiredStates = { "Attack_1", "Attack_2", "Attack_3", "UntimateAttack" };
+            string[] requiredStates = { "Attack_1", "Attack_2", "Attack_3", "UntimateAttack_1" };
             bool allStatesExist = true;
 
             foreach (var stateName in requiredStates)
@@ -153,7 +153,7 @@ namespace StarterAssets
             var attack1 = System.Array.Find(stateMachine.states, s => s.state.name == "Attack_1");
             var attack2 = System.Array.Find(stateMachine.states, s => s.state.name == "Attack_2");
             var attack3 = System.Array.Find(stateMachine.states, s => s.state.name == "Attack_3");
-            var ultimate = System.Array.Find(stateMachine.states, s => s.state.name == "UntimateAttack");
+            var ultimate = System.Array.Find(stateMachine.states, s => s.state.name == "UntimateAttack_1");
 
             Debug.Log($"\n?? Default State: {entryState?.name ?? "NONE"}");
 
@@ -203,8 +203,8 @@ namespace StarterAssets
             {
                 Debug.Log("\n?? Checking Ultimate Transition:");
                 Debug.Log("  ? Ultimate should transition from Any State");
-                Debug.Log("  ? Check manually: Any State ? UntimateAttack");
-                CheckReturnToIdle(ultimate.state, "UntimateAttack", entryState);
+                Debug.Log("  ? Check manually: Any State ? UntimateAttack_1");
+                CheckReturnToIdle(ultimate.state, "UntimateAttack_1", entryState);
             }
         }
 

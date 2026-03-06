@@ -247,7 +247,7 @@ namespace StarterAssets
             }
 
             // Check Ultimate Attack
-            if (currentState.IsName("UntimateAttack") || currentState.IsName("UntimateAttack_1"))
+            if (currentState.IsName("UntimateAttack_1"))
             {
                 if (normalizedTime >= ultimateSpawnTime && !_ultimateVFXSpawned)
                 {

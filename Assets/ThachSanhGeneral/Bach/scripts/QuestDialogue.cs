@@ -98,7 +98,7 @@ public class QuestDialogue : MonoBehaviour
         "Hiền đệ ơi, đêm nay đến phiên ta phải đi canh miếu thờ.",
         "Khốn nỗi ta đang dở mẻ rượu, mẹ già lại đang đau yếu.",
         "Liệu đệ có thể chịu khó đi canh miếu thay ta một đêm được không?",
-        "Huynh cứ ở nhà lo cho mẹ, việc canh miếu cứ để đệ lo.",
+        "Thạch Sanh: Huynh cứ ở nhà lo cho mẹ, việc canh miếu cứ để đệ lo.",
         "Đệ thật tốt bụng, xong việc về đây anh em ta cùng uống rượu!",
         "(Nói thầm) Thế là cái mạng què của mình đã có người thế!"
     };

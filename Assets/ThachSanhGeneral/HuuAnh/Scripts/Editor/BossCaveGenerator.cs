@@ -129,6 +129,131 @@ public class BossCaveGenerator : MonoBehaviour
         Debug.Log("Boss Cave Arena created! You can view it in the Scene.");
     }
 
+    [MenuItem("HuuAnh/Gen Cave Rescue Princess")]
+    public static void GeneratePrincessRescueCave()
+    {
+        // Define prefab paths
+        string basePath = "Assets/ThachSanhGeneral/HuuAnh/Models/PolishedSurfaces/System_RockSet_Sample/Art/Prefabs/";
+        string[] largeRockPaths = new string[]
+        {
+            basePath + "3. Large/SM_Large_01_Sample.prefab",
+            basePath + "8. Structures/PF_Sample_Large_01.prefab",
+            basePath + "3. Large/SM_Large_02_Sample.prefab" // Assuming there's another large rock, we'll try to use it if it exists, otherwise fall back to 1 and 2
+        };
+        string groundPath = basePath + "5. Ground/SM_Ground_01_Sample.prefab";
+        string structureGroundPath = basePath + "8. Structures/PF_Sample_Ground_01.prefab";
+
+        // Create main container
+        GameObject caveRoot = new GameObject("BossCaveArena_PrincessRescue");
+        Undo.RegisterCreatedObjectUndo(caveRoot, "Generate Princess Rescue Cave");
+
+        // Spawn Ground
+        GameObject groundPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(structureGroundPath);
+        if (groundPrefab == null) groundPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(groundPath);
+
+        if (groundPrefab != null)
+        {
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int z = -1; z <= 1; z++)
+                {
+                    GameObject ground = (GameObject)PrefabUtility.InstantiatePrefab(groundPrefab);
+                    ground.transform.SetParent(caveRoot.transform);
+                    ground.transform.position = new Vector3(x * 15f, 0, z * 15f);
+                    Undo.RegisterCreatedObjectUndo(ground, "Spawn Ground");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Ground Prefab not found. Please check the path.");
+        }
+
+        // Spawn Cave Walls (Circle of Large Rocks stacked upwards)
+        GameObject rockPrefab1 = AssetDatabase.LoadAssetAtPath<GameObject>(largeRockPaths[0]);
+        GameObject rockPrefab2 = AssetDatabase.LoadAssetAtPath<GameObject>(largeRockPaths[1]);
+        GameObject rockPrefab3 = AssetDatabase.LoadAssetAtPath<GameObject>(largeRockPaths[2]);
+
+        if (rockPrefab1 == null && rockPrefab2 == null)
+        {
+            Debug.LogError("Large Rock Prefab not found for cave walls!");
+            return;
+        }
+
+        int numberOfLayers = 3; 
+        float baseRadius = 35f; // User specified base radius 35f
+        
+        // Build the cave layer by layer going up
+        for (int layer = 0; layer < numberOfLayers; layer++)
+        {
+            // The cave gets slightly narrower at the top to form a cone/volcano shape
+            // Layer 0 is ground level, layer 2 is the top hole.
+            float currentRadius = Mathf.Lerp(baseRadius, baseRadius * 0.65f, (float)layer / (numberOfLayers - 1));
+            
+            // Calculate height of this layer
+            float yPos = -3f + (layer * 11f); // User specified layer height 11f
+            
+            // Calculate how many rocks go in this ring - use more rocks so we have dense overlapping for a smooth wall
+            int rocksInRing = Mathf.RoundToInt(50 * (currentRadius / baseRadius));
+            if (rocksInRing < 20) rocksInRing = 20; // Ensure a dense smooth ring
+
+            for (int i = 0; i < rocksInRing; i++)
+            {
+                float angle = i * Mathf.PI * 2 / rocksInRing;
+                
+                // Very little jitter to avoid rocks sticking out unevenly
+                float jitterX = Random.Range(-0.5f, 0.5f);
+                float jitterZ = Random.Range(-0.5f, 0.5f);
+                float jitterY = Random.Range(-1.5f, 1.5f);
+
+                float x = Mathf.Cos(angle) * currentRadius + jitterX;
+                float z = Mathf.Sin(angle) * currentRadius + jitterZ;
+                float finalY = yPos + jitterY;
+
+                // Select a random rock prefab
+                GameObject selectedPrefab = rockPrefab1;
+                int rand = Random.Range(0, 3);
+                if (rand == 0 && rockPrefab1 != null) selectedPrefab = rockPrefab1;
+                else if (rand == 1 && rockPrefab2 != null) selectedPrefab = rockPrefab2;
+                else if (rand == 2 && rockPrefab3 != null) selectedPrefab = rockPrefab3;
+                else if (rockPrefab1 != null) selectedPrefab = rockPrefab1;
+                else selectedPrefab = rockPrefab2;
+
+                GameObject wallRock = (GameObject)PrefabUtility.InstantiatePrefab(selectedPrefab);
+                wallRock.transform.SetParent(caveRoot.transform);
+                wallRock.transform.position = new Vector3(x, finalY, z);
+                
+                // Rotate to face inwards, keeping the flat side towards the center
+                wallRock.transform.LookAt(new Vector3(caveRoot.transform.position.x, wallRock.transform.position.y, caveRoot.transform.position.z));
+                
+                // For a smooth internal wall, we do NOT add random pitch/roll. 
+                // We just tilt the rock slightly backwards so the cave forms a slope.
+                if (layer == numberOfLayers - 1)
+                {
+                    // For the top ring, stand them almost straight up to form the hole edge cleanly
+                    wallRock.transform.rotation *= Quaternion.Euler(-5f, 0, 0); 
+                }
+                else
+                {
+                    // Lower layers tilt backwards naturally to slope towards the top
+                    wallRock.transform.rotation *= Quaternion.Euler(-18f, 0, 0); 
+                }
+
+                // Scale the rocks: wide to cover gaps, less thick so they don't stick out far into the center
+                float scaleXZ = Random.Range(4.0f, 6.0f); // Wide rocks for more coverage
+                float scaleY = Random.Range(3.0f, 4.5f);  // Slightly less tall stack to keep height down
+                float scaleDepth = Random.Range(2.0f, 3.0f); // Less deep (Z) so they don't stick out
+                
+                wallRock.transform.localScale = new Vector3(scaleXZ, scaleY, scaleDepth);
+
+                Undo.RegisterCreatedObjectUndo(wallRock, "Spawn Stacked Wall Rock");
+            }
+        }
+
+        Selection.activeGameObject = caveRoot;
+        Debug.Log("Princess Rescue Cave stacked! Wider and lower with a clean smooth interior and hole at the top.");
+    }
+
     [MenuItem("HuuAnh/Fix Dark Scene (Restore Default Brightness)")]
     public static void RestoreBrightEnvironment()
     {

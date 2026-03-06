@@ -40,7 +40,7 @@ public class BossCaveGenerator : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("Không tìm thấy Prefab mặt đất (Ground). Vui lòng kiểm tra lại đường dẫn.");
+            Debug.LogWarning("Ground Prefab not found. Please check the path.");
         }
 
         // Spawn Cave Walls (Circle of Large Rocks)
@@ -49,24 +49,24 @@ public class BossCaveGenerator : MonoBehaviour
 
         if (rockPrefab1 == null && rockPrefab2 == null)
         {
-            Debug.LogError("Không tìm thấy Prefab đá lớn (Large Rock) để làm vách hang!");
+            Debug.LogError("Large Rock Prefab not found for cave walls!");
             return;
         }
 
-        int numberOfRocks = 24; // Tăng số lượng đá
-        float radius = 35f; // Mở rộng bán kính gấp đôi
+        int numberOfRocks = 24; // Increased number of rocks
+        float radius = 35f; // Double the radius
         float heightScale = 2.5f;
 
-        // VÁCH HANG (Tạo hình móng ngựa để hở lối vào ở phía Nam Z = -radius)
+        // CAVE WALLS (Create horseshoe shape with entrance gap at South Z = -radius)
         for (int i = 0; i < numberOfRocks; i++)
         {
             float angle = i * Mathf.PI * 2 / numberOfRocks;
             
-            // Bỏ qua một góc 60 độ để tạo lối vào (từ 240 độ đến 300 độ)
+            // Skip 60 degree angle to create entrance (from 240 to 300 degrees)
             float degrees = angle * Mathf.Rad2Deg;
             if (degrees > 230f && degrees < 310f) continue;
 
-            // Thêm độ xê dịch ngẫu nhiên (jitter) để vách không thẳng băng
+            // Add random jitter so walls aren't perfectly aligned
             float jitterX = Random.Range(-3f, 3f);
             float jitterZ = Random.Range(-3f, 3f);
 
@@ -78,14 +78,14 @@ public class BossCaveGenerator : MonoBehaviour
 
             GameObject wallRock = (GameObject)PrefabUtility.InstantiatePrefab(selectedPrefab);
             wallRock.transform.SetParent(caveRoot.transform);
-            wallRock.transform.position = new Vector3(x, -3f, z); // Dìm đá xuống một chút cho lún xuống đất
+            wallRock.transform.position = new Vector3(x, -3f, z); // Sink rocks slightly into ground
             
-            // Xoay ngẫu nhiên mọi mặt để tạo vách đá tự nhiên
+            // Random rotation on all axes for natural rock walls
             wallRock.transform.rotation = Quaternion.Euler(Random.Range(-15f, 15f), Random.Range(0, 360f), Random.Range(-15f, 15f));
             
-            // Xoay mặt đá lớn hướng vào trong Arena
+            // Rotate large rock face toward arena center
             wallRock.transform.LookAt(caveRoot.transform.position + new Vector3(0, wallRock.transform.position.y, 0));
-            // Tilt ra sau một chút
+            // Tilt backward slightly
             wallRock.transform.Rotate(-15, 0, 0);
 
             float randomScaleX = Random.Range(1.8f, 3.5f);
@@ -95,11 +95,11 @@ public class BossCaveGenerator : MonoBehaviour
             Undo.RegisterCreatedObjectUndo(wallRock, "Spawn Cave Wall");
         }
 
-        // TRẦN HANG (Nhiều lớp đá chụm lại cao hơn)
-        for (int j = 0; j < 2; j++) // 2 vòng tròn đồng tâm tạo mái vòm
+        // CAVE CEILING (Multiple layers of rocks converging higher)
+        for (int j = 0; j < 2; j++) // 2 concentric circles create dome
         {
             float ceilingRadius = radius * (0.8f - j * 0.4f);
-            float ceilingHeight = 25f + j * 10f; // Vòng trong cao hơn vòng ngoài
+            float ceilingHeight = 25f + j * 10f; // Inner ring higher than outer ring
             
             for (int i = 0; i < numberOfRocks / (j + 1); i++)
             {
@@ -114,11 +114,11 @@ public class BossCaveGenerator : MonoBehaviour
                 ceilingRock.transform.SetParent(caveRoot.transform);
                 ceilingRock.transform.position = new Vector3(x, ceilingHeight, z);
                 
-                // Nghiêng đá cắm thẳng vào tâm trên không
+                // Tilt rocks pointing straight toward center overhead
                 Vector3 centerPoint = new Vector3(0, ceilingHeight + 20f, 0);
                 ceilingRock.transform.rotation = Quaternion.LookRotation(centerPoint - ceilingRock.transform.position) * Quaternion.Euler(90, 0, Random.Range(0,360f));
                 
-                float randomScale = Random.Range(3.0f, 4.5f); // Đá mái to hơn để che cho kín
+                float randomScale = Random.Range(3.0f, 4.5f); // Larger ceiling rocks for better coverage
                 ceilingRock.transform.localScale = new Vector3(randomScale, randomScale * 0.5f, randomScale);
 
                 Undo.RegisterCreatedObjectUndo(ceilingRock, "Spawn Cave Ceiling");
@@ -126,13 +126,13 @@ public class BossCaveGenerator : MonoBehaviour
         }
 
         Selection.activeGameObject = caveRoot;
-        Debug.Log("Đã tạo xong Arena Hang Động Boss! Bạn có thể xem trong Scene.");
+        Debug.Log("Boss Cave Arena created! You can view it in the Scene.");
     }
 
     [MenuItem("HuuAnh/Fix Dark Scene (Restore Default Brightness)")]
     public static void RestoreBrightEnvironment()
     {
-        // 1. Chỉnh Mặt trời sáng lên
+        // 1. Brighten Directional Light (Sun)
         Light[] allLights = GameObject.FindObjectsOfType<Light>();
         foreach (Light light in allLights)
         {
@@ -144,13 +144,13 @@ public class BossCaveGenerator : MonoBehaviour
             }
         }
 
-        // 2. Tắt sương mù đi
+        // 2. Disable fog
         RenderSettings.fog = false;
 
-        // 3. Khôi phục ánh sáng phản chiếu (Ambient) sáng sủa
+        // 3. Restore bright ambient lighting (Ambient Reflection)
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = new Color(0.8f, 0.8f, 0.8f);
 
-        Debug.Log("Đã khôi phục ánh sáng bình thường! Nếu nền trời vẫn đen, hãy vào Window > Rendering > Lighting, kéo một Material vào ô Skybox Material.");
+        Debug.Log("Default lighting restored! If sky is still black, go to Window > Rendering > Lighting and drag a Material into the Skybox Material slot.");
     }
 }

@@ -70,10 +70,10 @@ public class ChanTinhBossController : MonoBehaviour
     [SerializeField] private float runFootstepPitch = 1.1f;
 
     [Header("Attack Cooldowns")]
-    [SerializeField] private float roarCooldown = 10f; // Cooldown time for roar attack
-    [SerializeField] private float swipeCooldown = 3f;
-    [SerializeField] private float punchCooldown = 2f;
-    [SerializeField] private float jumpAttackCooldown = 8f;
+    [SerializeField] private float roarCooldown = 6f; // Cooldown time for roar attack (giảm từ 10f)
+    [SerializeField] private float swipeCooldown = 1.5f; // (giảm từ 3f)
+    [SerializeField] private float punchCooldown = 1f;   // (giảm từ 2f)
+    [SerializeField] private float jumpAttackCooldown = 5f; // (giảm từ 8f)
 
     private float lastAttackTime; // Time of the last attack performed
     private float currentCooldown; // Current cooldown of the ongoing attack

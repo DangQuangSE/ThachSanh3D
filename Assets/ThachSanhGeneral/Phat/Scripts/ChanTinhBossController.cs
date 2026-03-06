@@ -90,6 +90,18 @@ public class ChanTinhBossController : MonoBehaviour
     private int jumpAttackHash;
     private int hitHash; // Hit animation hash
 
+    
+    [Header("Quest Integration")]
+    [Tooltip("What kind of boss is this?")]
+    public BossType bossType = BossType.None;
+
+    public enum BossType
+    {
+        None,
+        ChanTinh,
+        DaiBangTinh
+    }
+
     private enum BossState
     {
         Idle, // Standing still, doing nothing
@@ -393,6 +405,13 @@ public class ChanTinhBossController : MonoBehaviour
 
         // Disable collider to stop receiving damage
         GetComponent<Collider>().enabled = false;
+
+        //Save quest progress
+        switch (bossType)
+        {
+            case BossType.ChanTinh: QuestDialogue.MarkChanTinhDead(); break;
+            case BossType.DaiBangTinh: QuestDialogue.MarkDaiBangDead(); break;
+        }
 
         // Destroy after 5 seconds
         Destroy(gameObject, 5f);

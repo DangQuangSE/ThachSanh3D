@@ -117,9 +117,9 @@ namespace StarterAssets
                 currentAnimationState = "Attack_3";
                 animationNormalizedTime = _animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
             }
-            else if (_animator.GetCurrentAnimatorStateInfo(0).IsName("UntimateAttack"))
+            else if (_animator.GetCurrentAnimatorStateInfo(0).IsName("UntimateAttack_1"))
             {
-                currentAnimationState = "UntimateAttack";
+                currentAnimationState = "UntimateAttack_1";
                 animationNormalizedTime = _animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
             }
             else if (_animator.GetCurrentAnimatorStateInfo(0).IsName("ProtectAxe"))
@@ -215,7 +215,7 @@ namespace StarterAssets
 
             // Current Animation
             style.normal.textColor = currentAnimationState == "Attack360" ? new Color(1f, 0.5f, 0f) : 
-                                     currentAnimationState == "UntimateAttack" ? Color.magenta : Color.yellow;
+                                     currentAnimationState == "UntimateAttack_1" ? Color.magenta : Color.yellow;
             if (hasAnimator)
             {
                 GUI.Label(new Rect(20, yPos, 330, 20), $"Current State: {currentAnimationState}", style);

@@ -611,7 +611,7 @@ namespace StarterAssets
             if (_hasAnimator)
             {
                 AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
-                isInUltimateState = currentState.IsName("UntimateAttack");
+                isInUltimateState = currentState.IsName("UntimateAttack_1");
                 
                 if (isInUltimateState)
                 {
@@ -1281,7 +1281,7 @@ namespace StarterAssets
             if (!AutoAimOnCombat || _combatTarget == null || !_hasAnimator) return;
             AnimatorStateInfo st = _animator.GetCurrentAnimatorStateInfo(0);
             bool inCombat = st.IsName("Attack_1") || st.IsName("Attack_2") || st.IsName("Attack_3")
-                         || st.IsName("UntimateAttack_1") || st.IsName("UntimateAttack") || st.IsName("Attack360");
+                         || st.IsName("UntimateAttack_1") || st.IsName("Attack360");
             if (!inCombat) return;
             Vector3 dir = _combatTarget.position - transform.position;
             dir.y = 0f;

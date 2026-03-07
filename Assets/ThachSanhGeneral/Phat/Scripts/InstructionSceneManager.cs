@@ -36,6 +36,7 @@ public class InstructionSceneManager : MonoBehaviour
         new InstructionData { step = 6, actionName = "Phòng thủ", keyBinding = "Q", description = "Giơ rìu đỡ (bất tử)" },
         new InstructionData { step = 7, actionName = "Lăn tránh", keyBinding = "Chuột Phải", description = "Lăn né đòn" },
         new InstructionData { step = 8, actionName = "Chiêu tuyệt", keyBinding = "R", description = "Ultimate attack" }
+
     };
 
     void Start()

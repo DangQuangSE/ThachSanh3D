@@ -35,8 +35,8 @@ public class InstructionSceneManager : MonoBehaviour
         new InstructionData { step = 5, actionName = "Kỹ năng E", keyBinding = "E", description = "Chém xoay 360°" },
         new InstructionData { step = 6, actionName = "Phòng thủ", keyBinding = "Q", description = "Giơ rìu đỡ (bất tử)" },
         new InstructionData { step = 7, actionName = "Lăn tránh", keyBinding = "Chuột Phải", description = "Lăn né đòn" },
-        new InstructionData { step = 8, actionName = "Chiêu tuyệt", keyBinding = "R", description = "Ultimate attack" }
-
+        new InstructionData { step = 8, actionName = "Chiêu tuyệt", keyBinding = "R", description = "Ultimate attack" },
+        new InstructionData { step = 9, actionName = "Chiêu tuyệt", keyBinding = "R", description = "Ultimate attack" }
     };
 
     void Start()
@@ -51,19 +51,19 @@ public class InstructionSceneManager : MonoBehaviour
 
     private void GenerateTextTable()
     {
-        // Sử dụng thẻ <pos> của TextMeshPro để gióng thành các cột thẳng hàng
-        // <pos=X%> đặt vị trí chữ ở X% chiều ngang.
-        string tableContent = "<size=110%><b><color=#A0E2FF>Bước</color><pos=15%><color=#A0E2FF>Hành động</color><pos=40%><color=#A0E2FF>Phím</color><pos=75%><color=#A0E2FF>Mô tả</color></b></size>\n";
+        // Điều chỉnh lại vị trí pos: Bước(0%), Hành động(8%), Phím(38%), Mô tả(75%)
+        // Đẩy cột Phím thụt qua trái 1 chút và kéo cột Mô tả lùi về bên phải để mở rộng diện tích tối đa cho Phím (37% màn hình)
+        string tableContent = "<size=110%><b><color=#A0E2FF>Bước</color><pos=8%><color=#A0E2FF>Hành động</color><pos=38%><color=#A0E2FF>Phím</color><pos=75%><color=#A0E2FF>Mô tả</color></b></size>\n";
         
         // Thêm dòng ngăn cách có màu mờ
-        tableContent += "<color=#FFFFFF50>---------------------------------------------------------------------------------------------------------------------</color>\n";
+        tableContent += "<color=#FFFFFF50>----------------------------------------------------------------------------------------------------------------------------</color>\n";
 
         foreach (var item in instructions)
         {
             tableContent += $"<color=#FFD700>{item.step}</color>" +
-                            $"<pos=15%>{item.actionName}" +
-                            $"<pos=40%><color=#FF8C00><b>{item.keyBinding}</b></color>" +
-                            $"<pos=75%><color=#B0C4DE><i>{item.description}</i></color>\n\n"; // \n\n để cách dòng dễ nhìn
+                            $"<pos=8%>{item.actionName}" +
+                            $"<pos=38%><color=#FF8C00><b>{item.keyBinding}</b></color>" +
+                            $"<pos=75%><indent=75%><color=#B0C4DE><i>{item.description}</i></color></indent>\n\n"; // \n\n để cách dòng dễ nhìn
         }
 
         instructionTextDisplay.text = tableContent;

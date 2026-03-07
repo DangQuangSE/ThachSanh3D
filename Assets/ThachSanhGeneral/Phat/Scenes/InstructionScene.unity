@@ -492,11 +492,11 @@ RectTransform:
   - {fileID: 1773414982}
   m_Father: {fileID: 1707452580}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.05}
-  m_AnchorMax: {x: 0.5, y: 0.05}
-  m_AnchoredPosition: {x: 0, y: 100}
+  m_AnchorMin: {x: 0.5, y: 0}
+  m_AnchorMax: {x: 0.5, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 300, y: 70}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &441154416
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -846,7 +846,7 @@ MonoBehaviour:
     description: "\u0110i l\u1EA1i t\u1EF1 do"
   - step: 2
     actionName: "Ch\u1EA1y nhanh"
-    keyBinding: "Left Shift (gi\u1EEF) + WASD"
+    keyBinding: "Shift (gi\u1EEF) + WASD"
     description: "Ch\u1EA1y sprint"
   - step: 3
     actionName: "Nh\u1EA3y"
@@ -855,7 +855,7 @@ MonoBehaviour:
   - step: 4
     actionName: "T\u1EA5n c\xF4ng"
     keyBinding: "Chu\u1ED9t Tr\xE1i"
-    description: "Combo 3 \u0111\xF2n (nh\u1EA5n li\xEAn t\u1EE5c)"
+    description: "Ch\xE9m r\xECu"
   - step: 5
     actionName: "K\u1EF9 n\u0103ng E"
     keyBinding: E
@@ -872,6 +872,16 @@ MonoBehaviour:
     actionName: "Chi\xEAu tuy\u1EC7t"
     keyBinding: R
     description: Ultimate attack
+  - step: 9
+    actionName: "V\xF2ng tr\xF2n h\u1ED3i m\xE1u"
+    keyBinding: "Xu\u1EA5t hi\u1EC7n ng\u1EABu nhi\xEAn 30s/l\u1EA7n"
+    description: "\u0110\u1EE9ng trong v\xF2ng tr\xF2n 5 gi\xE2y th\xEC s\u1EBD \u0111\u01B0\u1EE3c
+      h\u1ED3i m\xE1u"
+  - step: 10
+    actionName: "V\xF2ng tr\xF2n t\u0103ng s\u1EE9c m\u1EA1nh"
+    keyBinding: "Xu\u1EA5t hi\u1EC7n ng\u1EABu nhi\xEAn 30s/l\u1EA7n"
+    description: "\u0110\u1EE9ng trong v\xF2ng tr\xF2n 5 gi\xE2y th\xEC s\u1EBD \u0111\u01B0\u1EE3c
+      t\u0103ng s\u1EE9c m\u1EA1nh"
 --- !u!4 &927277058
 Transform:
   m_ObjectHideFlags: 0
@@ -1023,10 +1033,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 441154415}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 300, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1773414983
 MonoBehaviour:
@@ -1048,7 +1058,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "<b>B\u1EAFt \u0110\u1EA7u / Ti\u1EBFp T\u1EE5c</b>"
+  m_text: "<b>B\u1EAFt \u0110\u1EA7u</b>"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

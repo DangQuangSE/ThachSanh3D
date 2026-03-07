@@ -1,156 +1,187 @@
 using UnityEngine;
 using UnityEditor;
+using System.Collections.Generic;
 
 public class BossCaveGenerator : MonoBehaviour
 {
-    [MenuItem("HuuAnh/Generate Boss Cave (Polished Surfaces)")]
-    public static void GenerateCave()
+    [MenuItem("HuuAnh/Add Torches to Cave")]
+    public static void AddTorchesToCave()
     {
-        // Define prefab paths
-        string basePath = "Assets/ThachSanhGeneral/HuuAnh/Models/PolishedSurfaces/System_RockSet_Sample/Art/Prefabs/";
-        string[] largeRockPaths = new string[]
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName("Add Torches to Cave");
+        int group = Undo.GetCurrentGroup();
+
+        string torchPath = "Assets/ThachSanhGeneral/Quang/Models/Item/DuocFire.prefab";
+        GameObject torchPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(torchPath);
+        
+        if (torchPrefab == null)
         {
-            basePath + "3. Large/SM_Large_01_Sample.prefab",
-            basePath + "8. Structures/PF_Sample_Large_01.prefab"
-        };
-        string groundPath = basePath + "5. Ground/SM_Ground_01_Sample.prefab";
-        string structureGroundPath = basePath + "8. Structures/PF_Sample_Ground_01.prefab";
-
-        // Create main container
-        GameObject caveRoot = new GameObject("BossCaveArena_DaiBang");
-        Undo.RegisterCreatedObjectUndo(caveRoot, "Generate Boss Cave");
-
-        // Spawn Ground
-        GameObject groundPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(structureGroundPath);
-        if (groundPrefab == null) groundPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(groundPath);
-
-        if (groundPrefab != null)
-        {
-            for (int x = -1; x <= 1; x++)
-            {
-                for (int z = -1; z <= 1; z++)
-                {
-                    GameObject ground = (GameObject)PrefabUtility.InstantiatePrefab(groundPrefab);
-                    ground.transform.SetParent(caveRoot.transform);
-                    // Adjust spacing based on ground scale if necessary, assuming 10 units for now
-                    ground.transform.position = new Vector3(x * 15f, 0, z * 15f);
-                    Undo.RegisterCreatedObjectUndo(ground, "Spawn Ground");
-                }
-            }
-        }
-        else
-        {
-            Debug.LogWarning("Ground Prefab not found. Please check the path.");
-        }
-
-        // Spawn Cave Walls (Circle of Large Rocks)
-        GameObject rockPrefab1 = AssetDatabase.LoadAssetAtPath<GameObject>(largeRockPaths[0]);
-        GameObject rockPrefab2 = AssetDatabase.LoadAssetAtPath<GameObject>(largeRockPaths[1]);
-
-        if (rockPrefab1 == null && rockPrefab2 == null)
-        {
-            Debug.LogError("Large Rock Prefab not found for cave walls!");
+            EditorUtility.DisplayDialog("Error", "Torch Prefab (DuocFire) not found at:\n" + torchPath, "OK");
             return;
         }
 
-        int numberOfRocks = 24; // Increased number of rocks
-        float radius = 35f; // Double the radius
-        float heightScale = 2.5f;
-
-        // CAVE WALLS (Create horseshoe shape with entrance gap at South Z = -radius)
-        for (int i = 0; i < numberOfRocks; i++)
+        // 1. Robust cave search
+        GameObject caveRoot = GameObject.Find("CaveArena_PrincessRescue");
+        if (caveRoot == null) caveRoot = GameObject.Find("BossCaveArena_PrincessRescue");
+        
+        // If not found by exact name, look for anything with "PrincessRescue"
+        if (caveRoot == null)
         {
-            float angle = i * Mathf.PI * 2 / numberOfRocks;
-            
-            // Skip 60 degree angle to create entrance (from 240 to 300 degrees)
-            float degrees = angle * Mathf.Rad2Deg;
-            if (degrees > 230f && degrees < 310f) continue;
-
-            // Add random jitter so walls aren't perfectly aligned
-            float jitterX = Random.Range(-3f, 3f);
-            float jitterZ = Random.Range(-3f, 3f);
-
-            float x = Mathf.Cos(angle) * radius + jitterX;
-            float z = Mathf.Sin(angle) * radius + jitterZ;
-
-            GameObject selectedPrefab = (i % 2 == 0 && rockPrefab2 != null) ? rockPrefab2 : rockPrefab1;
-            if (selectedPrefab == null) selectedPrefab = rockPrefab1 ?? rockPrefab2;
-
-            GameObject wallRock = (GameObject)PrefabUtility.InstantiatePrefab(selectedPrefab);
-            wallRock.transform.SetParent(caveRoot.transform);
-            wallRock.transform.position = new Vector3(x, -3f, z); // Sink rocks slightly into ground
-            
-            // Random rotation on all axes for natural rock walls
-            wallRock.transform.rotation = Quaternion.Euler(Random.Range(-15f, 15f), Random.Range(0, 360f), Random.Range(-15f, 15f));
-            
-            // Rotate large rock face toward arena center
-            wallRock.transform.LookAt(caveRoot.transform.position + new Vector3(0, wallRock.transform.position.y, 0));
-            // Tilt backward slightly
-            wallRock.transform.Rotate(-15, 0, 0);
-
-            float randomScaleX = Random.Range(1.8f, 3.5f);
-            float randomScaleY = Random.Range(2.5f, 3.5f) * heightScale;
-            wallRock.transform.localScale = new Vector3(randomScaleX, randomScaleY, randomScaleX);
-
-            Undo.RegisterCreatedObjectUndo(wallRock, "Spawn Cave Wall");
-        }
-
-        // CAVE CEILING (Multiple layers of rocks converging higher)
-        for (int j = 0; j < 2; j++) // 2 concentric circles create dome
-        {
-            float ceilingRadius = radius * (0.8f - j * 0.4f);
-            float ceilingHeight = 25f + j * 10f; // Inner ring higher than outer ring
-            
-            for (int i = 0; i < numberOfRocks / (j + 1); i++)
+            GameObject[] allRoots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+            foreach (var root in allRoots)
             {
-                float angle = i * Mathf.PI * 2 / (numberOfRocks / (j + 1));
-                float x = Mathf.Cos(angle) * ceilingRadius;
-                float z = Mathf.Sin(angle) * ceilingRadius;
-
-                GameObject selectedPrefab = (i % 2 == 0 && rockPrefab2 != null) ? rockPrefab2 : rockPrefab1;
-                if (selectedPrefab == null) selectedPrefab = rockPrefab1 ?? rockPrefab2;
-
-                GameObject ceilingRock = (GameObject)PrefabUtility.InstantiatePrefab(selectedPrefab);
-                ceilingRock.transform.SetParent(caveRoot.transform);
-                ceilingRock.transform.position = new Vector3(x, ceilingHeight, z);
-                
-                // Tilt rocks pointing straight toward center overhead
-                Vector3 centerPoint = new Vector3(0, ceilingHeight + 20f, 0);
-                ceilingRock.transform.rotation = Quaternion.LookRotation(centerPoint - ceilingRock.transform.position) * Quaternion.Euler(90, 0, Random.Range(0,360f));
-                
-                float randomScale = Random.Range(3.0f, 4.5f); // Larger ceiling rocks for better coverage
-                ceilingRock.transform.localScale = new Vector3(randomScale, randomScale * 0.5f, randomScale);
-
-                Undo.RegisterCreatedObjectUndo(ceilingRock, "Spawn Cave Ceiling");
+                if (root.name.ToLower().Contains("princess") && root.name.ToLower().Contains("rescue"))
+                {
+                    caveRoot = root;
+                    break;
+                }
             }
         }
 
-        Selection.activeGameObject = caveRoot;
-        Debug.Log("Boss Cave Arena created! You can view it in the Scene.");
+        // Fallback to selection
+        if (caveRoot == null) caveRoot = Selection.activeGameObject;
+
+        if (caveRoot == null)
+        {
+            EditorUtility.DisplayDialog("Cave Not Found", "Please CLICK on your Cave object in the Hierarchy first, then run this menu.", "OK");
+            return;
+        }
+
+        Debug.LogWarning("--- STARTING TORCH SETUP FOR: " + caveRoot.name + " ---");
+
+        // 2. Setup Hierarchy Container
+        Transform existingContainer = caveRoot.transform.Find("Torches_Container");
+        if (existingContainer != null) Undo.DestroyObjectImmediate(existingContainer.gameObject);
+
+        GameObject containerObj = new GameObject("Torches_Container");
+        // Use Selection-aware parenting for better editor behavior
+        Undo.RegisterCreatedObjectUndo(containerObj, "Create Torches Container");
+        GameObjectUtility.SetParentAndAlign(containerObj, caveRoot);
+        containerObj.transform.localPosition = Vector3.zero;
+        containerObj.transform.localRotation = Quaternion.identity;
+
+        // 3. SPAWN TORCHES
+        // Ground Ring: 8 torches around central area where Player/Boss stand
+        SpawnTorchRing(containerObj.transform, torchPrefab, 8, 0.4f, 16f, 0f, "Ground_Torch");
+
+        // Upper Ring: 6 torches high on the wall
+        SpawnTorchRing(containerObj.transform, torchPrefab, 6, 28.0f, 28f, 45f, "Upper_Wall_Torch");
+
+        // 4. AUTOMATIC ATMOSPHERE ENHANCEMENT
+        ApplyAtmosphereEnhancement(caveRoot);
+
+        Undo.CollapseUndoOperations(group);
+        
+        // SELECT THE FOLDER to show the user where it is
+        Selection.activeGameObject = containerObj;
+        EditorGUIUtility.PingObject(containerObj);
+
+        EditorUtility.DisplayDialog("Success!", "Added Torches to [" + caveRoot.name + "].\nCheck the selected 'Torches_Container' in Hierarchy.", "I see it!");
+        Debug.LogWarning("SUCCESS: Torches added under " + caveRoot.name + "/Torches_Container. OBJECT SELECTED.");
     }
 
-    [MenuItem("HuuAnh/Fix Dark Scene (Restore Default Brightness)")]
-    public static void RestoreBrightEnvironment()
+    private static void SpawnTorchRing(Transform parent, GameObject prefab, int count, float height, float radius, float tiltAngle, string namePrefix)
     {
-        // 1. Brighten Directional Light (Sun)
-        Light[] allLights = GameObject.FindObjectsOfType<Light>();
-        foreach (Light light in allLights)
+        for (int i = 0; i < count; i++)
         {
-            if (light.type == LightType.Directional)
+            float angle = i * Mathf.PI * 2 / count;
+            Vector3 localPos = new Vector3(Mathf.Cos(angle) * radius, height, Mathf.Sin(angle) * radius);
+            
+            GameObject torch = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            torch.name = namePrefix + "_" + i;
+            torch.transform.SetParent(parent);
+            torch.transform.localPosition = localPos;
+            
+            // Point towards center
+            Vector3 centerInWorld = parent.TransformPoint(new Vector3(0, height, 0));
+            torch.transform.LookAt(centerInWorld);
+            
+            // Tilt if needed (Wall torches)
+            if (tiltAngle != 0)
             {
-                Undo.RecordObject(light, "Restore Directional Light");
-                light.intensity = 1.0f; 
-                light.color = Color.white; 
+                torch.transform.Rotate(-tiltAngle, 0, 0, Space.Self);
             }
+
+            Undo.RegisterCreatedObjectUndo(torch, "Add Torch");
+        }
+    }
+
+    [MenuItem("HuuAnh/Add Light Shaft to Cave")]
+    public static void AddLightShaftToCave()
+    {
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName("Add Light Shaft");
+        int group = Undo.GetCurrentGroup();
+
+        GameObject caveRoot = FindCaveRoot();
+        if (caveRoot == null)
+        {
+            EditorUtility.DisplayDialog("Cave Not Found", "Please select your Cave in the Hierarchy first.", "OK");
+            return;
         }
 
-        // 2. Disable fog
-        RenderSettings.fog = false;
+        ApplyAtmosphereEnhancement(caveRoot);
 
-        // 3. Restore bright ambient lighting (Ambient Reflection)
+        Undo.CollapseUndoOperations(group);
+        EditorUtility.DisplayDialog("Success!", "Light Shaft and Atmosphere applied to [" + caveRoot.name + "].", "Brilliant!");
+    }
+
+    private static GameObject FindCaveRoot()
+    {
+        GameObject caveRoot = GameObject.Find("CaveArena_PrincessRescue");
+        if (caveRoot == null) caveRoot = GameObject.Find("BossCaveArena_PrincessRescue");
+        
+        if (caveRoot == null)
+        {
+            GameObject[] allRoots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+            foreach (var root in allRoots)
+            {
+                if (root.name.ToLower().Contains("princess") && root.name.ToLower().Contains("rescue"))
+                    return root;
+            }
+        }
+        return Selection.activeGameObject;
+    }
+
+    private static void ApplyAtmosphereEnhancement(GameObject caveRoot)
+    {
+        Undo.RecordObject(Unsupported.GetRenderSettings(), "Update Atmosphere");
+
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.8f, 0.8f, 0.8f);
+        RenderSettings.ambientLight = new Color(0.18f, 0.18f, 0.22f); 
+        RenderSettings.fog = true;
+        RenderSettings.fogColor = new Color(0.08f, 0.08f, 0.12f);
+        RenderSettings.fogDensity = 0.012f;
 
-        Debug.Log("Default lighting restored! If sky is still black, go to Window > Rendering > Lighting and drag a Material into the Skybox Material slot.");
+        // Internal Fill Light
+        Transform existingFill = caveRoot.transform.Find("Cave_InternalFillLight");
+        if (existingFill != null) Undo.DestroyObjectImmediate(existingFill.gameObject);
+
+        GameObject fillObj = new GameObject("Cave_InternalFillLight");
+        fillObj.transform.SetParent(caveRoot.transform);
+        fillObj.transform.localPosition = new Vector3(0, 15f, 0);
+        Light fillLight = fillObj.AddComponent<Light>();
+        fillLight.type = LightType.Point;
+        fillLight.intensity = 1.6f;
+        fillLight.range = 80f;
+        fillLight.color = new Color(1f, 0.9f, 0.75f);
+        Undo.RegisterCreatedObjectUndo(fillObj, "Add Fill Light");
+
+        // Top Shaft Light
+        Transform existingShaft = caveRoot.transform.Find("Cave_TopShaftLight");
+        if (existingShaft != null) Undo.DestroyObjectImmediate(existingShaft.gameObject);
+
+        GameObject shaftObj = new GameObject("Cave_TopShaftLight");
+        shaftObj.transform.SetParent(caveRoot.transform);
+        shaftObj.transform.localPosition = new Vector3(0, 50f, 0);
+        shaftObj.transform.localRotation = Quaternion.Euler(90, 0, 0);
+        Light shaftLight = shaftObj.AddComponent<Light>();
+        shaftLight.type = LightType.Spot;
+        shaftLight.intensity = 30f; // Extra power for the shaft logic
+        shaftLight.color = new Color(0.7f, 0.85f, 1f);
+        shaftLight.range = 100f;
+        shaftLight.spotAngle = 40f;
+        shaftLight.shadows = LightShadows.Soft;
+        Undo.RegisterCreatedObjectUndo(shaftObj, "Add Shaft Light");
     }
 }

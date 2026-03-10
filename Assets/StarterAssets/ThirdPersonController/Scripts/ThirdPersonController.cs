@@ -92,6 +92,13 @@ namespace StarterAssets
         [Tooltip("Enable/disable roll")]
         public bool RollEnabled = true;
 
+        [Header("Protect (Q)")]
+        [Tooltip("Cooldown time for protect skill in seconds")]
+        public float ProtectCooldown = 5.0f;
+
+        [Tooltip("Enable/disable protect skill")]
+        public bool ProtectEnabled = true;
+
         [Header("Combat Targeting")]
         [Tooltip("Automatically face the nearest enemy when attacking or using skills")]
         public bool AutoAimOnCombat = true;
@@ -150,6 +157,8 @@ namespace StarterAssets
 
         // protect
         private bool _isProtecting = false;
+        private float _protectCooldownTimer = 0f;
+        private bool _isProtectReady = true;
 
         // eskill (Attack360)
         private float _eskillCooldownTimer = 0f;
@@ -695,6 +704,17 @@ namespace StarterAssets
 
         private void HandleProtect()
         {
+            // Update cooldown timer
+            if (!_isProtectReady && _protectCooldownTimer > 0)
+            {
+                _protectCooldownTimer -= Time.deltaTime;
+                if (_protectCooldownTimer <= 0)
+                {
+                    _isProtectReady = true;
+                    Debug.Log("Protect is ready!");
+                }
+            }
+
             // Check if currently performing protect
             bool isInProtectState = false;
             if (_hasAnimator)
@@ -716,6 +736,18 @@ namespace StarterAssets
             if (_input.protect)
             {
                 _input.protect = false;
+
+                if (!ProtectEnabled)
+                {
+                    Debug.LogWarning("Protect is disabled!");
+                    return;
+                }
+
+                if (!_isProtectReady)
+                {
+                    Debug.Log($"Protect on cooldown! {_protectCooldownTimer:F1}s remaining");
+                    return;
+                }
 
                 if (!Grounded)
                 {
@@ -748,6 +780,8 @@ namespace StarterAssets
                     _animator.SetTrigger(_animIDProtect);
                     
                     _isProtecting = true;
+                    _isProtectReady = false;
+                    _protectCooldownTimer = ProtectCooldown;
 
                     Debug.Log("Protect activated!");
                 }
@@ -1205,6 +1239,22 @@ namespace StarterAssets
         public float GetRollRemainingCooldown()
         {
             return _rollCooldownTimer;
+        }
+
+        public float GetProtectCooldownProgress()
+        {
+            if (_isProtectReady) return 1f;
+            return 1f - (_protectCooldownTimer / ProtectCooldown);
+        }
+
+        public bool IsProtectReady()
+        {
+            return _isProtectReady;
+        }
+
+        public float GetProtectRemainingCooldown()
+        {
+            return _protectCooldownTimer;
         }
 
         private void FindCombatTarget()

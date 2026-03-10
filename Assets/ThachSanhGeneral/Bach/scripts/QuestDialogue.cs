@@ -9,11 +9,12 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// H? th?ng h?i tho?i nh?n nhi?m v? ?ánh boss.
+/// H? th?ng h?i tho?i nhân nhi?m v? ?ánh boss.
 /// G?n script này lên NPC/GameObject t??ng tác.
 /// Dùng PlayerPrefs ?? l?u ti?n trình gi?a các scene.
 /// H? tr? c? Legacy Text và TextMeshPro.
 /// T??ng thích v?i New Input System.
+/// KHÔNG CẦN BUTTON - Dùng SPACE hoặc CLICK để tiếp tục
 /// </summary>
 public class QuestDialogue : MonoBehaviour
 {
@@ -29,6 +30,9 @@ public class QuestDialogue : MonoBehaviour
     [Tooltip("Tên scene ?ánh ??i Bàng Tinh")]
     public string daiBangSceneName  = "PlaygroundB";
 
+    [Tooltip("Tên scene Main Menu (quay về sau khi hoàn thành)")]
+    public string mainMenuSceneName = "MainMenu";
+
     // ?? Kho?ng cách t??ng tác ??????????????????????????????????????????????
     [Header("Interaction")]
     [Tooltip("Kho?ng cách ?? player có th? nói chuy?n v?i NPC")]
@@ -37,28 +41,31 @@ public class QuestDialogue : MonoBehaviour
     [Tooltip("Phím t??ng tác")]
     public KeyCode interactKey = KeyCode.F;
 
+    [Tooltip("Phím tiếp tục hội thoại (Space hoặc Click chuột)")]
+    public KeyCode continueKey = KeyCode.Space;
+
     [Tooltip("Tag c?a player")]
     public string playerTag = "Player";
 
-    [Tooltip("Hi?n g?i ý nh?n F khi ??n g?n")]
+    [Tooltip("Hi?n g?i ý nhấn F khi ??n gàn")]
     public GameObject interactHint;
+
+    [Tooltip("Hint tiếp tục - VD: 'Nhấn SPACE hoặc Click để tiếp tục'")]
+    public GameObject continueHint;
 
     // ?? UI (Legacy Text) ???????????????????????????????????????????????????
     [Header("Dialogue UI - Legacy Text")]
     [Tooltip("Panel ch?a toàn b? h?i tho?i")]
     public GameObject dialoguePanel;
 
+    [Tooltip("Panel tên nhân vật")]
+    public GameObject characterNamePanel; // ← THÊM FIELD MỚI
+
     [Tooltip("Tên NPC (Legacy Text)")]
     public Text npcNameText;
 
     [Tooltip("N?i dung h?i tho?i (Legacy Text)")]
     public Text dialogueText;
-
-    [Tooltip("Nút ti?p t?c / next")]
-    public Button nextButton;
-
-    [Tooltip("Text trên nút Next (Legacy Text)")]
-    public Text nextButtonText;
 
     [Tooltip("Panel xác nh?n ??ng Ý / T? Ch?i")]
     public GameObject confirmPanel;
@@ -77,8 +84,8 @@ public class QuestDialogue : MonoBehaviour
     [Tooltip("N?i dung h?i tho?i (TextMeshPro)")]
     public TMP_Text dialogueTextTMP;
 
-    [Tooltip("Text trên nút Next (TextMeshPro)")]
-    public TMP_Text nextButtonTextTMP;
+    [Tooltip("Text gợi ý tiếp tục (TMP) - VD: '▼ Nhấn SPACE'")]
+    public TMP_Text continueHintTextTMP;
 
     // ?? T?c ?? hi?u ?ng typewriter ????????????????????????????????????????
     [Header("Typewriter Effect")]
@@ -104,8 +111,8 @@ public class QuestDialogue : MonoBehaviour
     [Tooltip("Âm thanh nền cho đoạn hội thoại kết thúc (tùy chọn)")]
     public AudioClip allDoneBackgroundMusic;
 
-    [Tooltip("Âm thanh cho từng dòng hội thoại kết thúc (6 dòng)")]
-    public AudioClip[] allDoneLineAudios = new AudioClip[6];
+    [Tooltip("Âm thanh cho từng dòng hội thoại kết thúc (7 dòng)")]
+    public AudioClip[] allDoneLineAudios = new AudioClip[7];
 
     [Header("Audio Settings")]
     [Tooltip("Âm lượng cho âm thanh hội thoại (0-1)")]
@@ -122,6 +129,25 @@ public class QuestDialogue : MonoBehaviour
     [Tooltip("Âm lượng typewriter sound")]
     [Range(0f, 1f)]
     public float typewriterVolume = 0.2f;
+
+    [Header("Scene Background Music")]
+    [Tooltip("Nhạc nền cho scene này (phát khi scene bắt đầu)")]
+    public AudioClip sceneBackgroundMusic;
+
+    [Tooltip("Âm lượng nhạc nền scene (0-1)")]
+    [Range(0f, 1f)]
+    public float sceneBackgroundMusicVolume = 0.3f;
+
+    [Tooltip("Tự động phát nhạc nền khi scene bắt đầu")]
+    public bool autoPlaySceneMusic = true;
+
+    [Header("Ending Settings")]
+    [Tooltip("Thời gian chờ trước khi chuyển về Main Menu (giây)")]
+    public float delayBeforeMainMenu = 3f;
+
+    [Header("Genshin Style (Optional)")]
+    [Tooltip("Genshin Dialogue Styler để thêm animations")]
+    public GenshinDialogueStyler genshinStyler;
 
     // ?? N?i dung h?i tho?i ????????????????????????????????????????????????
     [Header("NPC Info")]
@@ -157,12 +183,13 @@ public class QuestDialogue : MonoBehaviour
       "Thạch Sanh: Công chúa đã an toàn chưa anh? Giờ hãy thả dây xuống cho tôi nhé!",
       "Lý Thông: Thạch Sanh à, đệ làm rất tốt. Chằn Tinh và Đại Bàng Tinh đều đã bị tiêu diệt. Nhưng công lao này, một mình ta hưởng là đủ rồi!",
       "Lý Thông: Quân đâu! Mau lăn đá lấp kín cửa hang lại. Ta phải về triều báo tin vui là chính ta đã diệt quái vật cứu công chúa.",
-      "Thạch Sanh: Lý Thông... tại sao anh lại đối xử với tôi như vậy..."
+      "Thạch Sanh: Lý Thông... tại sao anh lại đối xử với tôi như vậy...",
+      "--- HẾT CHƯƠNG 1 ---"
     };
 
     // ?????????????????????????????????????????????????????????????????????
     // Private state
-    // ?????????????????????????????????????????????????????????????????????
+    // ═════════════════════════════════════════════════════════
     private Transform _player;
     private bool      _isDialogueOpen    = false;
     private int       _currentLineIndex  = 0;
@@ -171,12 +198,19 @@ public class QuestDialogue : MonoBehaviour
     private string    _targetScene;
     private bool      _isTyping          = false;
     private string    _fullCurrentLine   = "";
+    private string    _currentDialogueContent = "";
     private Coroutine _typeCoroutine;
+    private bool      _isEndingDialogue  = false;
+    private bool      _canContinue       = false;
 
     // Audio sources
     private AudioSource _dialogueAudioSource;
     private AudioSource _backgroundMusicSource;
     private AudioSource _typewriterAudioSource;
+    private AudioSource _sceneBackgroundMusicSource;
+
+    // Cache DialogueSystem reference để tránh Find() inactive object
+    private GameObject _dialogueSystemCache;
 
     // ?????????????????????????????????????????????????????????????????????
     // Unity lifecycle
@@ -184,38 +218,194 @@ public class QuestDialogue : MonoBehaviour
 
     private void Start()
     {
-        // Setup audio sources
         SetupAudioSources();
+        
+        // Auto-find UI elements nếu chưa được gán
+        AutoFindUIElements();
 
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
         if (confirmPanel  != null) confirmPanel.SetActive(false);
         if (interactHint  != null) interactHint.SetActive(false);
+        if (continueHint  != null) continueHint.SetActive(false);
 
-        if (nextButton    != null) nextButton.onClick.AddListener(OnNextClicked);
         if (acceptButton  != null) acceptButton.onClick.AddListener(OnAccept);
         if (declineButton != null) declineButton.onClick.AddListener(OnDecline);
 
         GameObject playerObj = GameObject.FindGameObjectWithTag(playerTag);
         if (playerObj != null) _player = playerObj.transform;
+
+        // Phát nhạc nền cho scene (nếu có thiết lập)
+        if (sceneBackgroundMusic != null && autoPlaySceneMusic)
+        {
+            PlaySceneBackgroundMusic();
+        }
+    }
+
+    private void AutoFindUIElements()
+    {
+        // Tìm DialogueSystem trong scene (kể cả khi inactive)
+        GameObject dialogueSystem = null;
+        
+        // Tìm trong tất cả objects (bao gồm inactive)
+        GameObject[] allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+        foreach (GameObject obj in allObjects)
+        {
+            if (obj.name == "DialogueSystem" && obj.scene.isLoaded)
+            {
+                dialogueSystem = obj;
+                _dialogueSystemCache = obj; // CACHE REFERENCE
+                break;
+            }
+        }
+
+        if (dialogueSystem == null)
+        {
+            Debug.LogWarning("[QuestDialogue] Không tìm thấy DialogueSystem trong scene. Vui lòng gán UI thủ công.");
+            return;
+        }
+
+        Debug.Log($"[QuestDialogue] ✓ Tìm thấy DialogueSystem (Active: {dialogueSystem.activeSelf})");
+
+        // Auto-find các UI elements
+        if (dialoguePanel == null)
+        {
+            Transform dp = dialogueSystem.transform.Find("DialoguePanel");
+            if (dp != null)
+            {
+                dialoguePanel = dp.gameObject;
+                Debug.Log("[QuestDialogue] ✓ Auto-found DialoguePanel");
+            }
+        }
+
+        // AUTO-FIND CHARACTER NAME PANEL
+        if (characterNamePanel == null && dialogueSystem != null)
+        {
+            Transform cnp = dialogueSystem.transform.Find("CharacterNamePanel");
+            if (cnp != null)
+            {
+                characterNamePanel = cnp.gameObject;
+                Debug.Log("[QuestDialogue] ✓ Auto-found CharacterNamePanel");
+            }
+        }
+
+        if (confirmPanel == null)
+        {
+            Transform cp = dialogueSystem.transform.Find("ConfirmPanel");
+            if (cp != null)
+            {
+                confirmPanel = cp.gameObject;
+                Debug.Log("[QuestDialogue] ✓ Auto-found ConfirmPanel");
+            }
+        }
+
+        if (acceptButton == null && confirmPanel != null)
+        {
+            Transform ab = confirmPanel.transform.Find("AcceptButton");
+            if (ab != null)
+            {
+                acceptButton = ab.GetComponent<Button>();
+                Debug.Log("[QuestDialogue] ✓ Auto-found AcceptButton");
+            }
+        }
+
+        if (declineButton == null && confirmPanel != null)
+        {
+            Transform db = confirmPanel.transform.Find("DeclineButton");
+            if (db != null)
+            {
+                declineButton = db.GetComponent<Button>();
+                Debug.Log("[QuestDialogue] ✓ Auto-found DeclineButton");
+            }
+        }
+
+        if (npcNameTextTMP == null && characterNamePanel != null)
+        {
+            npcNameTextTMP = characterNamePanel.GetComponentInChildren<TMP_Text>();
+            Debug.Log("[QuestDialogue] ✓ Auto-found CharacterNameText");
+        }
+
+        if (dialogueTextTMP == null && dialoguePanel != null)
+        {
+            Transform dt = dialoguePanel.transform.Find("DialogueText");
+            if (dt != null)
+            {
+                dialogueTextTMP = dt.GetComponent<TMP_Text>();
+                Debug.Log("[QuestDialogue] ✓ Auto-found DialogueText");
+            }
+        }
+
+        if (continueHint == null && dialoguePanel != null)
+        {
+            Transform ch = dialoguePanel.transform.Find("ContinueHint");
+            if (ch != null)
+            {
+                continueHint = ch.gameObject;
+                Debug.Log("[QuestDialogue] ✓ Auto-found ContinueHint");
+            }
+        }
+
+        if (continueHintTextTMP == null && continueHint != null)
+        {
+            Transform cht = continueHint.transform.Find("ContinueHintText");
+            if (cht != null)
+            {
+                continueHintTextTMP = cht.GetComponent<TMP_Text>();
+                Debug.Log("[QuestDialogue] ✓ Auto-found ContinueHintText");
+            }
+        }
+
+        if (interactHint == null)
+        {
+            // InteractHint ở ngoài DialogueSystem, tìm toàn cục
+            foreach (GameObject obj in allObjects)
+            {
+                if (obj.name == "InteractHint" && obj.scene.isLoaded)
+                {
+                    interactHint = obj;
+                    Debug.Log("[QuestDialogue] ✓ Auto-found InteractHint");
+                    break;
+                }
+            }
+        }
+
+        if (genshinStyler == null)
+        {
+            genshinStyler = dialogueSystem.GetComponent<GenshinDialogueStyler>();
+            if (genshinStyler != null)
+            {
+                Debug.Log("[QuestDialogue] ✓ Auto-found GenshinDialogueStyler");
+            }
+        }
+
+        Debug.Log("[QuestDialogue] ✓ Auto-find UI elements hoàn tất");
     }
 
     private void SetupAudioSources()
     {
-        // Dialogue AudioSource
         _dialogueAudioSource = gameObject.AddComponent<AudioSource>();
         _dialogueAudioSource.playOnAwake = false;
         _dialogueAudioSource.volume = dialogueVolume;
 
-        // Background Music AudioSource
         _backgroundMusicSource = gameObject.AddComponent<AudioSource>();
         _backgroundMusicSource.playOnAwake = false;
         _backgroundMusicSource.loop = true;
         _backgroundMusicSource.volume = backgroundMusicVolume;
 
-        // Typewriter Sound AudioSource
         _typewriterAudioSource = gameObject.AddComponent<AudioSource>();
         _typewriterAudioSource.playOnAwake = false;
         _typewriterAudioSource.volume = typewriterVolume;
+
+        // Setup scene background music source
+        _sceneBackgroundMusicSource = gameObject.AddComponent<AudioSource>();
+        _sceneBackgroundMusicSource.playOnAwake = false;
+        _sceneBackgroundMusicSource.loop = true;
+        _sceneBackgroundMusicSource.volume = sceneBackgroundMusicVolume;
+
+        // Auto play scene music if enabled
+        if (autoPlaySceneMusic && sceneBackgroundMusic != null)
+        {
+            PlaySceneBackgroundMusic();
+        }
     }
 
     private void Update()
@@ -225,12 +415,24 @@ public class QuestDialogue : MonoBehaviour
         float dist = Vector3.Distance(transform.position, _player.position);
         bool  inRange = dist <= interactRange;
 
+        // Hiển thị interact hint khi chưa mở dialogue
         if (interactHint != null)
             interactHint.SetActive(inRange && !_isDialogueOpen);
 
-        // Check input v?i New Input System ho?c Old Input System
+        // Mở dialogue bằng phím F
         if (inRange && !_isDialogueOpen && GetInteractKeyDown())
+        {
             OpenDialogue();
+        }
+
+        // Tiếp tục dialogue bằng SPACE hoặc Click chuột
+        if (_isDialogueOpen && _canContinue)
+        {
+            if (GetContinueKeyDown() || GetMouseLeftClick())
+            {
+                OnContinueClicked();
+            }
+        }
     }
 
     // ?????????????????????????????????????????????????????????????????????
@@ -240,7 +442,6 @@ public class QuestDialogue : MonoBehaviour
     private bool GetInteractKeyDown()
     {
 #if ENABLE_INPUT_SYSTEM
-        // New Input System
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null) return false;
 
@@ -253,8 +454,29 @@ public class QuestDialogue : MonoBehaviour
             default:                return false;
         }
 #else
-        // Old Input System
         return Input.GetKeyDown(interactKey);
+#endif
+    }
+
+    private bool GetContinueKeyDown()
+    {
+#if ENABLE_INPUT_SYSTEM
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard == null) return false;
+        return keyboard.spaceKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(continueKey);
+#endif
+    }
+
+    private bool GetMouseLeftClick()
+    {
+#if ENABLE_INPUT_SYSTEM
+        Mouse mouse = Mouse.current;
+        if (mouse == null) return false;
+        return mouse.leftButton.wasPressedThisFrame;
+#else
+        return Input.GetMouseButtonDown(0);
 #endif
     }
 
@@ -269,14 +491,17 @@ public class QuestDialogue : MonoBehaviour
 
         if (daiBangDead)
         {
+            _isEndingDialogue = true;
             StartDialogue(_allDoneLines, allDoneLineAudios, allDoneBackgroundMusic, null);
         }
         else if (chanTinhDead)
         {
+            _isEndingDialogue = false;
             StartDialogue(_daiBangLines, daiBangLineAudios, daiBangBackgroundMusic, daiBangSceneName);
         }
         else
         {
+            _isEndingDialogue = false;
             StartDialogue(_chanTinhLines, chanTinhLineAudios, chanTinhBackgroundMusic, chanTinhSceneName);
         }
     }
@@ -288,78 +513,67 @@ public class QuestDialogue : MonoBehaviour
         _targetScene       = targetScene;
         _currentLineIndex  = 0;
         _isDialogueOpen    = true;
+        _canContinue       = false;
+
+        // HIỆN TOÀN BỘ DIALOGUE SYSTEM - DÙNG CACHED REFERENCE
+        if (_dialogueSystemCache != null)
+        {
+            _dialogueSystemCache.SetActive(true);
+            Debug.Log("[QuestDialogue] ✓ DialogueSystem activated (from cache)");
+        }
+        else
+        {
+            // Fallback: Tìm lại nếu cache mất
+            GameObject[] allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+            foreach (GameObject obj in allObjects)
+            {
+                if (obj.name == "DialogueSystem" && obj.scene.isLoaded)
+                {
+                    _dialogueSystemCache = obj;
+                    _dialogueSystemCache.SetActive(true);
+                    Debug.Log("[QuestDialogue] ✓ DialogueSystem activated (fallback find)");
+                    break;
+                }
+            }
+            
+            if (_dialogueSystemCache == null)
+            {
+                Debug.LogError("[QuestDialogue] ✗ DialogueSystem not found!");
+            }
+        }
 
         if (dialoguePanel != null) dialoguePanel.SetActive(true);
         if (confirmPanel  != null) confirmPanel.SetActive(false);
         if (interactHint  != null) interactHint.SetActive(false);
 
-        // Set NPC name (h? tr? c? Text và TMP)
+        // Set NPC name mặc định (sẽ thay đổi khi parse dialogue)
         SetText(npcNameText, npcNameTextTMP, npcName);
 
-        // Hi?n và unlock cursor ?? click button
+        // Hiện và unlock cursor để click button
         SetCursorState(true);
 
-        // D?ng movement player (tu? ch?n)
+        // Dừng movement player
         SetPlayerMovement(false);
+
+        // Tạm dừng nhạc nền scene khi bắt đầu dialogue
+        if (_sceneBackgroundMusicSource != null && _sceneBackgroundMusicSource.isPlaying)
+        {
+            _sceneBackgroundMusicSource.Pause();
+            Debug.Log("[QuestDialogue] ⏸ Scene music paused for dialogue");
+        }
 
         // Play background music
         PlayBackgroundMusic(backgroundMusic);
 
+        // Genshin style animation - GỌI SAU KHI ĐÃ ACTIVE
+        if (genshinStyler != null)
+        {
+            genshinStyler.FadeIn();
+            genshinStyler.BounceCharacterName();
+        }
+
         ShowLine(_currentLineIndex);
     }
-
-    // ?????????????????????????????????????????????????????????????????????
-    // Audio Methods
-    // ?????????????????????????????????????????????????????????????????????
-
-    private void PlayBackgroundMusic(AudioClip clip)
-    {
-        if (clip == null || _backgroundMusicSource == null) return;
-
-        _backgroundMusicSource.clip = clip;
-        _backgroundMusicSource.Play();
-    }
-
-    private void StopBackgroundMusic()
-    {
-        if (_backgroundMusicSource != null && _backgroundMusicSource.isPlaying)
-        {
-            _backgroundMusicSource.Stop();
-        }
-    }
-
-    private void PlayLineAudio(int lineIndex)
-    {
-        if (_dialogueAudioSource == null) return;
-        if (_currentLineAudios == null || lineIndex >= _currentLineAudios.Length) return;
-
-        AudioClip clip = _currentLineAudios[lineIndex];
-        if (clip != null)
-        {
-            _dialogueAudioSource.clip = clip;
-            _dialogueAudioSource.Play();
-        }
-    }
-
-    private void StopLineAudio()
-    {
-        if (_dialogueAudioSource != null && _dialogueAudioSource.isPlaying)
-        {
-            _dialogueAudioSource.Stop();
-        }
-    }
-
-    private void PlayTypewriterSound()
-    {
-        if (typewriterSound != null && _typewriterAudioSource != null)
-        {
-            _typewriterAudioSource.PlayOneShot(typewriterSound);
-        }
-    }
-
-    // ?????????????????????????????????????????????????????????????????????
-    // Hi?n th? t?ng dòng
-    // ?????????????????????????????????????????????????????????????????????
 
     private void ShowLine(int index)
     {
@@ -370,18 +584,40 @@ public class QuestDialogue : MonoBehaviour
         }
 
         _fullCurrentLine = _currentLines[index];
+        _canContinue = false;
 
-        // Stop previous line audio and play new one
+        // PARSE TÊN NHÂN VẬT TỪ DIALOGUE
+        string speakerName = npcName; // Mặc định
+        string dialogueContent = _fullCurrentLine;
+
+        // Kiểm tra format: "Tên: Nội dung"
+        if (_fullCurrentLine.Contains(":"))
+        {
+            int colonIndex = _fullCurrentLine.IndexOf(':');
+            string potentialName = _fullCurrentLine.Substring(0, colonIndex).Trim();
+            
+            // Chỉ parse nếu tên ngắn (< 20 ký tự) và không có số
+            if (potentialName.Length < 20 && !System.Text.RegularExpressions.Regex.IsMatch(potentialName, @"\d"))
+            {
+                speakerName = potentialName;
+                dialogueContent = _fullCurrentLine.Substring(colonIndex + 1).Trim();
+            }
+        }
+
+        // LƯU DIALOGUE CONTENT ĐÃ PARSE
+        _currentDialogueContent = dialogueContent;
+
+        // Update character name
+        SetText(npcNameText, npcNameTextTMP, speakerName);
+
+        // Ẩn continue hint khi bắt đầu dòng mới
+        if (continueHint != null) continueHint.SetActive(false);
+
         StopLineAudio();
         PlayLineAudio(index);
 
         if (_typeCoroutine != null) StopCoroutine(_typeCoroutine);
-        _typeCoroutine = StartCoroutine(TypeLine(_fullCurrentLine));
-
-        // C?p nh?t nhãn nút
-        bool isLastLine = (index == _currentLines.Length - 1);
-        string buttonLabel = isLastLine ? "Kết Thúc" : "Tiếp Tục";
-        SetText(nextButtonText, nextButtonTextTMP, buttonLabel);
+        _typeCoroutine = StartCoroutine(TypeLine(dialogueContent));
     }
 
     private IEnumerator TypeLine(string line)
@@ -394,61 +630,147 @@ public class QuestDialogue : MonoBehaviour
             string currentText = GetText(dialogueText, dialogueTextTMP);
             SetText(dialogueText, dialogueTextTMP, currentText + c);
             
-            // Play typewriter sound
             PlayTypewriterSound();
             
             yield return new WaitForSeconds(1f / typeSpeed);
         }
 
         _isTyping = false;
+        _canContinue = true;
+
+        // Hiển thị continue hint sau khi đánh xong
+        if (continueHint != null) continueHint.SetActive(true);
+        
+        // Update continue hint text
+        UpdateContinueHintText();
+    }
+
+    private void UpdateContinueHintText()
+    {
+        bool isLastLine = (_currentLineIndex == _currentLines.Length - 1);
+        
+        string hintText;
+        if (_isEndingDialogue && isLastLine)
+        {
+            hintText = "▼ SPACE - Quay về Main Menu";
+        }
+        else if (isLastLine)
+        {
+            hintText = "▼ SPACE - Kết thúc";
+        }
+        else
+        {
+            hintText = "▼ SPACE hoặc Click";
+        }
+        
+        SetText(null, continueHintTextTMP, hintText);
     }
 
     // ?????????????????????????????????????????????????????????????????????
-    // S? ki?n nút
-    // ????????????????????????????????????????????????????????????????????
+    // S? kiện nút
+    // ?????????????????????????????????????????????????????????????????????
 
-    private void OnNextClicked()
+    private void OnContinueClicked()
     {
-        // N?u ?ang typewriter ? hi?n ngay toàn b? dòng
+        // Nếu đang typing → Skip và hiện toàn bộ NỘI DUNG (không có tên)
         if (_isTyping)
         {
             if (_typeCoroutine != null) StopCoroutine(_typeCoroutine);
             _isTyping = false;
-            SetText(dialogueText, dialogueTextTMP, _fullCurrentLine);
+            _canContinue = true;
+            SetText(dialogueText, dialogueTextTMP, _currentDialogueContent);
+            
+            if (continueHint != null) continueHint.SetActive(true);
+            UpdateContinueHintText();
             return;
         }
 
-        _currentLineIndex++;
-        ShowLine(_currentLineIndex);
+        // Nếu không đang typing và có thể tiếp tục → Next line
+        if (_canContinue)
+        {
+            _currentLineIndex++;
+            ShowLine(_currentLineIndex);
+        }
     }
 
     private void OnDialogueEnd()
     {
-        // Stop audio when dialogue ends
         StopLineAudio();
         
-        // N?u có scene ?ích (còn nhi?m v?) ? hi?n confirm panel
+        if (continueHint != null) continueHint.SetActive(false);
+
+        if (_isEndingDialogue)
+        {
+            Debug.Log("[QuestDialogue] Hoàn thành! Đang chuyển về Main Menu...");
+            StartCoroutine(ReturnToMainMenu());
+            return;
+        }
+        
         if (!string.IsNullOrEmpty(_targetScene))
         {
-            if (dialoguePanel != null) dialoguePanel.SetActive(false);
-            if (confirmPanel  != null) confirmPanel.SetActive(true);
+            Debug.Log($"[QuestDialogue] Kết thúc hội thoại - Tự động chuyển scene: {_targetScene}");
+            
+            // Hiển thị thông báo đang chuyển scene
+            SetText(dialogueText, dialogueTextTMP, "Đang chuẩn bị xuất phát...");
+            
+            // Đợi 1.5 giây rồi tự động chuyển scene
+            StartCoroutine(AutoLoadScene(_targetScene));
         }
         else
         {
-            // Không có nhi?m v? ? ?óng h?i tho?i bình th??ng
+            Debug.Log("[QuestDialogue] Không có target scene, đóng dialogue");
             CloseDialogue();
         }
+    }
+
+    private IEnumerator AutoLoadScene(string sceneName)
+    {
+        // Đợi một chút để người chơi thấy thông báo
+        yield return new WaitForSeconds(1.5f);
+        
+        StopBackgroundMusic();
+        StopLineAudio();
+        StopSceneBackgroundMusic(); // Dừng nhạc nền scene khi chuyển scene
+        
+        if (dialoguePanel != null) dialoguePanel.SetActive(false);
+        if (characterNamePanel != null) characterNamePanel.SetActive(false);
+        if (confirmPanel != null) confirmPanel.SetActive(false);
+        
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+        
+        SetPlayerMovement(true);
+        _isDialogueOpen = false;
+
+        Debug.Log($"[QuestDialogue] Đang tải scene: {sceneName}");
+        SceneManager.LoadScene(sceneName);
+    }
+
+    private IEnumerator ReturnToMainMenu()
+    {
+        SetText(dialogueText, dialogueTextTMP, "Đang trở về Main Menu...");
+        yield return new WaitForSeconds(delayBeforeMainMenu);
+        
+        StopBackgroundMusic();
+        StopLineAudio();
+        StopSceneBackgroundMusic(); // Dừng nhạc nền scene khi về Main Menu
+        
+        if (dialoguePanel != null) dialoguePanel.SetActive(false);
+        
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+        
+        Debug.Log("[QuestDialogue] Chuyển về Main Menu: " + mainMenuSceneName);
+        SceneManager.LoadScene(mainMenuSceneName);
     }
 
     private void OnAccept()
     {
         if (confirmPanel != null) confirmPanel.SetActive(false);
         
-        // Stop all audio
         StopBackgroundMusic();
         StopLineAudio();
         
-        // ?n và lock cursor tr??c khi chuy?n scene
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
         
@@ -464,7 +786,14 @@ public class QuestDialogue : MonoBehaviour
     private void OnDecline()
     {
         if (confirmPanel != null) confirmPanel.SetActive(false);
-        CloseDialogue();
+        
+        // HIỆN LẠI CHARACTER NAME PANEL KHI DECLINE
+        if (characterNamePanel != null) characterNamePanel.SetActive(true);
+        if (dialoguePanel != null) dialoguePanel.SetActive(true);
+        
+        // Quay lại dòng cuối để player có thể đọc lại
+        _currentLineIndex = _currentLines.Length - 1;
+        ShowLine(_currentLineIndex);
     }
 
     private void CloseDialogue()
@@ -472,24 +801,44 @@ public class QuestDialogue : MonoBehaviour
         if (_typeCoroutine != null) StopCoroutine(_typeCoroutine);
         _isTyping       = false;
         _isDialogueOpen = false;
+        _canContinue    = false;
 
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
         if (confirmPanel  != null) confirmPanel.SetActive(false);
+        if (continueHint  != null) continueHint.SetActive(false);
 
-        // Stop all audio
+        // ẨN TOÀN BỘ DIALOGUE SYSTEM - DÙNG CACHED REFERENCE
+        if (_dialogueSystemCache != null)
+        {
+            _dialogueSystemCache.SetActive(false);
+            Debug.Log("[QuestDialogue] ✓ DialogueSystem deactivated");
+        }
+
         StopBackgroundMusic();
         StopLineAudio();
 
-        // ?n và lock cursor khi ?óng h?i tho?i (tr?ng thái bình th??ng c?a game)
+        // Tiếp tục phát nhạc nền scene sau khi đóng dialogue
+        if (_sceneBackgroundMusicSource != null && !_sceneBackgroundMusicSource.isPlaying && sceneBackgroundMusic != null)
+        {
+            _sceneBackgroundMusicSource.UnPause();
+            Debug.Log("[QuestDialogue] ▶ Scene music resumed");
+        }
+
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
 
         SetPlayerMovement(true);
+
+        // Genshin fade out
+        if (genshinStyler != null)
+        {
+            genshinStyler.FadeOut();
+        }
     }
 
     // ?????????????????????????????????????????????????????????????????????
     // Chuy?n scene
-    // ????????????????????????????????????????????????????????????????????
+    // ?????????????????????????????????????????????????????????????????????
 
     private IEnumerator LoadScene(string sceneName)
     {
@@ -499,7 +848,7 @@ public class QuestDialogue : MonoBehaviour
 
     // ?????????????????????????????????????????????????????????????????????
     // Khoá/m? movement player
-    // ????????????????????????????????????????????????????????????????????
+    // ?????????????????????????????????????????????????????????????????????
 
     private void SetPlayerMovement(bool enabled)
     {
@@ -514,7 +863,7 @@ public class QuestDialogue : MonoBehaviour
 
     // ?????????????????????????????????????????????????????????????????????
     // Hi?n/?n con tr? chu?t (ch? dùng khi M? dialog)
-    // ????????????????????????????????????????????????????????????????????
+    // ?????????????????????????????????????????????????????????????????????
 
     private void SetCursorState(bool visible)
     {
@@ -524,7 +873,7 @@ public class QuestDialogue : MonoBehaviour
 
     // ?????????????????????????????????????????????????????????????????????
     // Helper: Set text (h? tr? c? Text và TextMeshPro)
-    // ????????????????????????????????????????????????????????????????????
+    // ?????????????????????????????????????????????????????????????????????
 
     private void SetText(Text legacyText, TMP_Text tmpText, string value)
     {
@@ -541,7 +890,7 @@ public class QuestDialogue : MonoBehaviour
 
     // ?????????????????????????????????????????????????????????????????????
     // Static helpers — g?i t? BossController khi boss ch?t
-    // ????????????????????????????????????????????????????????????????????
+    // ?????????????????????????????????????????????????????????????????????
 
     public static void MarkChanTinhDead()
     {
@@ -566,12 +915,70 @@ public class QuestDialogue : MonoBehaviour
     }
 
     // ?????????????????????????????????????????????????????????????????????
-    // Gizmo
-    // ????????????????????????????????????????????????????????????????????
 
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, interactRange);
+    }
+
+    // ?????????????????????????????????????????????????????????????????????
+    // Audio Methods
+    // ?????????????????????????????????????????????????????????????????????
+
+    private void PlayBackgroundMusic(AudioClip clip)
+    {
+        if (clip == null || _backgroundMusicSource == null) return;
+        _backgroundMusicSource.clip = clip;
+        _backgroundMusicSource.Play();
+    }
+
+    private void StopBackgroundMusic()
+    {
+        if (_backgroundMusicSource != null && _backgroundMusicSource.isPlaying)
+            _backgroundMusicSource.Stop();
+    }
+
+    private void PlayLineAudio(int lineIndex)
+    {
+        if (_dialogueAudioSource == null) return;
+        if (_currentLineAudios == null || lineIndex >= _currentLineAudios.Length) return;
+
+        AudioClip clip = _currentLineAudios[lineIndex];
+        if (clip != null)
+        {
+            _dialogueAudioSource.clip = clip;
+            _dialogueAudioSource.Play();
+        }
+    }
+
+    private void StopLineAudio()
+    {
+        if (_dialogueAudioSource != null && _dialogueAudioSource.isPlaying)
+            _dialogueAudioSource.Stop();
+    }
+
+    private void PlayTypewriterSound()
+    {
+        if (typewriterSound != null && _typewriterAudioSource != null)
+            _typewriterAudioSource.PlayOneShot(typewriterSound);
+    }
+
+    private void PlaySceneBackgroundMusic()
+    {
+        if (sceneBackgroundMusic == null || _sceneBackgroundMusicSource == null) return;
+        
+        _sceneBackgroundMusicSource.clip = sceneBackgroundMusic;
+        _sceneBackgroundMusicSource.Play();
+        Debug.Log("[QuestDialogue] ✓ Scene background music started");
+    }
+
+    private void StopSceneBackgroundMusic()
+    {
+        if (_sceneBackgroundMusicSource != null && _sceneBackgroundMusicSource.isPlaying)
+        {
+            _sceneBackgroundMusicSource.Stop();
+            Debug.Log("[QuestDialogue] ✓ Scene background music stopped");
+        }
     }
 }

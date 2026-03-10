@@ -78,6 +78,7 @@ public class BossSceneTransition : MonoBehaviour
     private bool _transitionStarted = false;
     private float _checkTimer = 0f;
     private const float CHECK_INTERVAL = 0.5f;
+    private bool _loggedEmptyLinesWarning = false;
 
     // Audio sources — moved to CoroutineRunner so they survive boss destruction
     private static AudioSource _dialogueAudioSource;
@@ -162,7 +163,7 @@ public class BossSceneTransition : MonoBehaviour
             // This prevents duplicate/misconfigured scripts (like on 'GameManager') from hijacking the real Boss.
             if (playBetrayalDialogue && (betrayalDialogue == null || betrayalDialogue.Count == 0))
             {
-                Debug.LogWarning($"<color=orange>[BossSceneTransition] '{gameObject.name}' is trying to trigger dialogue but HAS NO LINES! Ignoring it to let the real Boss script take control.</color>");
+                DebugLog($"'{gameObject.name}' is trying to trigger dialogue but HAS NO LINES! Ignoring it to let the real Boss script take control.");
                 return; // Stop right here, don't lock anything.
             }
 
@@ -228,7 +229,7 @@ public class BossSceneTransition : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[BossSceneTransition] Dialogue skipped — playBetrayalDialogue={s_playBetrayalDialogue}, count={s_betrayalDialogue?.Count}");
+            DebugLog($"Dialogue skipped — playBetrayalDialogue={s_playBetrayalDialogue}, count={s_betrayalDialogue?.Count}");
         }
 
         Time.timeScale = 1f;
@@ -268,8 +269,8 @@ public class BossSceneTransition : MonoBehaviour
     {
         Debug.Log("<color=cyan>[BossSceneTransition] PlayDialogueSequence started!</color>");
         
-        // 1. Initial 2 second delay after boss dies/disappears
-        yield return new WaitForSecondsRealtime(2.0f); 
+        // 1. Initial 3 second delay after boss dies/disappears
+        yield return new WaitForSecondsRealtime(3.0f); 
 
         // Freeze gameplay — dialogue uses WaitForSecondsRealtime so it isn't affected
         Time.timeScale = 0f;
@@ -398,7 +399,8 @@ public class BossSceneTransition : MonoBehaviour
         // ── SLIM CENTERED DIALOGUE PANEL (Near Bottom, Translucent)
         GameObject dialogPanel = CreateUIImage(_activeCanvas.transform, "DialoguePanel",
             new Color(0f, 0f, 0f, 0.55f), 
-            new Vector2(0.05f, 0.02f), new Vector2(0.95f, 0.20f)); // 90% width, slim height
+            new Vector2(0.05f, 0.02f), new Vector2(0.95f, 0.20f)); // 90% width, standard slim height
+        dialogPanel.transform.SetAsLastSibling();
 
         // ── Name Box Background (Centered Tag) ───────────────────
         GameObject nameBox = CreateUIImage(dialogPanel.transform, "NameBoxBg",
@@ -459,7 +461,7 @@ public class BossSceneTransition : MonoBehaviour
         // ── DIALOGUE LOOP ─────────────────────────────────────────
         if (s_betrayalDialogue == null || s_betrayalDialogue.Count == 0)
         {
-            Debug.LogWarning("[BossSceneTransition] PlayDialogueSequence: s_betrayalDialogue is EMPTY!");
+            DebugLog("PlayDialogueSequence: s_betrayalDialogue is EMPTY!");
             yield break;
         }
 
@@ -830,11 +832,20 @@ public class BossSceneTransition : MonoBehaviour
         MonoBehaviour[] scripts = FindObjectsOfType<MonoBehaviour>();
         foreach (var script in scripts)
         {
+            if (script == null) continue;
             string n = script.GetType().Name;
+            
+            // 1. Disable Control Scripts
             if (n == "PlayerAttack" || n == "PlayerInput" || n.Contains("ThirdPersonUserControl"))
             {
                 script.enabled = false;
                 DebugLog($"Disabled: {n}");
+            }
+            // 2. Hide HUD/Health Bars
+            else if (n == "PlayerHealthBarSync" || n == "HealthBarUIDaiBang")
+            {
+                script.gameObject.SetActive(false);
+                DebugLog($"Hidden HUD: {n}");
             }
         }
     }
@@ -844,10 +855,18 @@ public class BossSceneTransition : MonoBehaviour
         MonoBehaviour[] scripts = FindObjectsOfType<MonoBehaviour>(true);
         foreach (var script in scripts)
         {
+            if (script == null) continue;
             string n = script.GetType().Name;
+            
+            // 1. Re-enable Control Scripts
             if (n == "PlayerAttack" || n == "PlayerInput" || n.Contains("ThirdPersonUserControl"))
             {
                 script.enabled = true;
+            }
+            // 2. Show HUD/Health Bars
+            else if (n == "PlayerHealthBarSync" || n == "HealthBarUIDaiBang")
+            {
+                script.gameObject.SetActive(true);
             }
         }
     }

@@ -8,6 +8,9 @@ public class MainMenu : MonoBehaviour
     [Tooltip("Tên scene game chính c?n load (ph?i có trong Build Settings)")]
     public string gameSceneName = "PlaygroundB";
 
+    [Tooltip("Tên scene h??ng d?n/Tutorial")]
+    public string tutorialSceneName = "Tutorial";
+
     [Header("Background Music")]
     [Tooltip("AudioClip nh?c n?n main menu")]
     public AudioClip menuMusic;
@@ -28,6 +31,9 @@ public class MainMenu : MonoBehaviour
 
     [Tooltip("Nút Settings (tu? ch?n)")]
     public Button settingsButton;
+
+    [Tooltip("Nút Tutorial/H??ng D?n (tu? ch?n)")]
+    public Button tutorialButton;
 
     [Tooltip("Panel Settings (tu? ch?n)")]
     public GameObject settingsPanel;
@@ -92,6 +98,9 @@ public class MainMenu : MonoBehaviour
         if (settingsButton != null)
             settingsButton.onClick.AddListener(ToggleSettings);
 
+        if (tutorialButton != null)
+            tutorialButton.onClick.AddListener(OpenTutorial);
+
         if (muteButton != null)
             muteButton.onClick.AddListener(ToggleMute);
 
@@ -144,6 +153,21 @@ public class MainMenu : MonoBehaviour
         else
         {
             StartCoroutine(FadeOutAndLoad(gameSceneName));
+        }
+    }
+
+    // ?? Tutorial/H??ng D?n ??????????????????????????????????????????????
+
+    public void OpenTutorial()
+    {
+        if (loadingScreen != null)
+        {
+            loadingScreen.SetActive(true);
+            StartCoroutine(LoadSceneAsync(tutorialSceneName));
+        }
+        else
+        {
+            StartCoroutine(FadeOutAndLoad(tutorialSceneName));
         }
     }
 

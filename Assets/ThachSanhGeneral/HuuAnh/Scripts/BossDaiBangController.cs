@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
 #if ENABLE_INPUT_SYSTEM
@@ -889,9 +889,21 @@ public class BossDaiBangController : MonoBehaviour
         isDead = true;
         currentState = BossState.Death;
 
+        // Force stop BGM
         if (_bgmSource != null)
         {
             _bgmSource.Stop();
+            _bgmSource.volume = 0f;
+        }
+
+        // Failsafe: check all audio sources on this object just in case
+        AudioSource[] allSources = GetComponents<AudioSource>();
+        foreach(var src in allSources)
+        {
+            if (src != null && src.clip == bgmBoss && src.isPlaying)
+            {
+                src.Stop();
+            }
         }
 
         // Use PlayClipAtPoint so death sound keeps playing after GameObject is destroyed

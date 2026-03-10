@@ -34,6 +34,7 @@ public class BossDaiBangHealthBarWorld : MonoBehaviour
     public Gradient healthColorGradient;
 
     private Camera mainCamera;
+    private bool _isWorldSpace = true;
 
     void Start()
     {
@@ -68,10 +69,12 @@ public class BossDaiBangHealthBarWorld : MonoBehaviour
         if (bossNameText != null)
             bossNameText.text = string.IsNullOrEmpty(bossDisplayName) ? "Boss" : bossDisplayName;
 
-        // Warn if Canvas is not World Space - bar will not float above boss head
-        var canvas = GetComponent<Canvas>();
+        // Check if Canvas is World Space. If not, we will not force position/rotation.
+        var canvas = GetComponentInParent<Canvas>();
         if (canvas != null && canvas.renderMode != RenderMode.WorldSpace)
-            Debug.LogWarning("BossDaiBangHealthBarWorld: Set Canvas Render Mode = World Space for the health bar to appear above boss head (Inspector > Canvas > Render Mode).");
+        {
+            _isWorldSpace = false;
+        }
 
         // Health bar color: red (low HP) -> yellow -> green (full HP). Override if gradient is white/not configured.
         bool useDefaultGradient = healthColorGradient == null;
@@ -103,13 +106,16 @@ public class BossDaiBangHealthBarWorld : MonoBehaviour
             return;
         }
 
-        // Update position
-        transform.position = boss.transform.position + offset;
-
-        // Billboard to camera
-        if (billboardToCamera && mainCamera != null)
+        // Update position only if in World Space mode
+        if (_isWorldSpace)
         {
-            transform.rotation = Quaternion.LookRotation(transform.position - mainCamera.transform.position);
+            transform.position = boss.transform.position + offset;
+
+            // Billboard to camera
+            if (billboardToCamera && mainCamera != null)
+            {
+                transform.rotation = Quaternion.LookRotation(transform.position - mainCamera.transform.position);
+            }
         }
 
         // Update health bar

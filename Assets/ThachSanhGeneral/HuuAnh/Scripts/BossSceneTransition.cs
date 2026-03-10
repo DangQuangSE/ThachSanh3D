@@ -101,6 +101,7 @@ public class BossSceneTransition : MonoBehaviour
     private static float snapshot_bgmVolume;
     private static bool s_transitionInProgress = false; // Prevent multiple triggers/overwrites
     private GameObject _activeCanvas; // Track current dialogue canvas for cleanup
+    private UnityEngine.UI.Text _continueText; // Track continue prompt
 
     void Start()
     {
@@ -266,7 +267,9 @@ public class BossSceneTransition : MonoBehaviour
     private IEnumerator PlayDialogueSequence()
     {
         Debug.Log("<color=cyan>[BossSceneTransition] PlayDialogueSequence started!</color>");
-        yield return new WaitForSecondsRealtime(0.75f); // Reduced initial delay (was 1.5s)
+        
+        // 1. Initial 2 second delay after boss dies/disappears
+        yield return new WaitForSecondsRealtime(2.0f); 
 
         // Freeze gameplay — dialogue uses WaitForSecondsRealtime so it isn't affected
         Time.timeScale = 0f;
@@ -298,12 +301,14 @@ public class BossSceneTransition : MonoBehaviour
         Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (uiFont == null) uiFont = Font.CreateDynamicFontFromOSFont("Arial", 50);
 
-        // ── Full dark background ──────────────────────────────────
+        // ── FULL OVERLAYS REMOVED TO KEEP MAP VISIBLE ─────────────
+        /*
         GameObject bgObj = CreateUIImage(_activeCanvas.transform, "Background",
             new Color(0.04f, 0.04f, 0.07f, 1f),
             Vector2.zero, Vector2.one);
+        */
 
-        // ── LETTERBOX — top bar ───────────────────────────────────
+        /*
         GameObject letterTop = CreateUIImage(_activeCanvas.transform, "LetterboxTop",
             Color.black,
             new Vector2(0f, 0.88f), new Vector2(1f, 1f));
@@ -312,9 +317,12 @@ public class BossSceneTransition : MonoBehaviour
         GameObject letterBot = CreateUIImage(_activeCanvas.transform, "LetterboxBottom",
             Color.black,
             new Vector2(0f, 0f), new Vector2(1f, 0.12f));
+        */
 
-        // ── LEFT AVATAR (Thạch Sanh) — circular ──────────────────
+        // ── PORTRAITS REMOVED PER IMAGE 2 ─────────────────────────
         Sprite circleSprite = CreateCircleSprite(256);
+        /* 
+        // Side portraits are hidden to match Image 2 style
         // Outer glow ring (left)
         GameObject leftRingObj = CreateUIImage(_activeCanvas.transform, "LeftRing",
             new Color(0.3f, 0.7f, 1f, 0.85f),
@@ -385,36 +393,31 @@ public class BossSceneTransition : MonoBehaviour
         // Ring image refs for glow animation
         var leftRingImg  = leftRingObj.GetComponent<UnityEngine.UI.Image>();
         var rightRingImg = rightRingObj.GetComponent<UnityEngine.UI.Image>();
+        */
 
-        // ── CENTER DIALOGUE PANEL ─────────────────────────────────
+        // ── SLIM CENTERED DIALOGUE PANEL (Near Bottom, Translucent)
         GameObject dialogPanel = CreateUIImage(_activeCanvas.transform, "DialoguePanel",
-            new Color(0.05f, 0.05f, 0.1f, 0.92f),
-            new Vector2(0.26f, 0.13f), new Vector2(0.74f, 0.87f));
+            new Color(0f, 0f, 0f, 0.55f), 
+            new Vector2(0.05f, 0.02f), new Vector2(0.95f, 0.20f)); // 90% width, slim height
 
-        // Subtle border
-        var outline = dialogPanel.AddComponent<UnityEngine.UI.Outline>();
-        outline.effectColor = new Color(0.5f, 0.5f, 0.8f, 0.4f);
-        outline.effectDistance = new Vector2(2f, -2f);
+        // ── Name Box Background (Centered Tag) ───────────────────
+        GameObject nameBox = CreateUIImage(dialogPanel.transform, "NameBoxBg",
+            new Color(0.1f, 0.1f, 0.1f, 0.85f), 
+            new Vector2(0.42f, 1.0f), new Vector2(0.58f, 1.35f)); // Centered and adjusted
 
         // Speaker name text
         GameObject nameObj = new GameObject("SpeakerName");
-        nameObj.transform.SetParent(dialogPanel.transform, false);
+        nameObj.transform.SetParent(nameBox.transform, false); // Parented to NameBox
         var nameText = nameObj.AddComponent<UnityEngine.UI.Text>();
         nameText.font = uiFont;
-        nameText.fontSize = 52;
+        nameText.fontSize = 48;
         nameText.fontStyle = FontStyle.Bold;
-        nameText.alignment = TextAnchor.UpperCenter;
+        nameText.alignment = TextAnchor.MiddleCenter;
         nameText.supportRichText = true;
         var nameRect = nameObj.GetComponent<RectTransform>();
-        nameRect.anchorMin = new Vector2(0f, 0.78f);
-        nameRect.anchorMax = new Vector2(1f, 1f);
-        nameRect.offsetMin = new Vector2(10, 0);
-        nameRect.offsetMax = new Vector2(-10, -10);
-
-        // Divider line under name
-        GameObject divider = CreateUIImage(dialogPanel.transform, "Divider",
-            new Color(0.5f, 0.5f, 0.8f, 0.5f),
-            new Vector2(0.05f, 0.76f), new Vector2(0.95f, 0.775f));
+        nameRect.anchorMin = Vector2.zero;
+        nameRect.anchorMax = Vector2.one;
+        nameRect.sizeDelta = Vector2.zero;
 
         // Dialogue message text
         GameObject msgObj = new GameObject("MessageText");
@@ -422,24 +425,36 @@ public class BossSceneTransition : MonoBehaviour
         var msgText = msgObj.AddComponent<UnityEngine.UI.Text>();
         msgText.font = uiFont;
         msgText.fontSize = 42;
-        msgText.lineSpacing = 1.35f;
+        msgText.lineSpacing = 1.3f;
         msgText.color = new Color(0.95f, 0.95f, 0.95f, 1f);
         msgText.alignment = TextAnchor.UpperLeft;
         msgText.horizontalOverflow = HorizontalWrapMode.Wrap;
         msgText.verticalOverflow = VerticalWrapMode.Truncate;
         msgText.supportRichText = true;
         var msgRect = msgObj.GetComponent<RectTransform>();
-        msgRect.anchorMin = new Vector2(0f, 0.02f);
-        msgRect.anchorMax = new Vector2(1f, 0.74f);
-        msgRect.offsetMin = new Vector2(18, 8);
-        msgRect.offsetMax = new Vector2(-18, 0);
+        msgRect.anchorMin = new Vector2(0.05f, 0.25f); // Less horizontal padding needed for 90% width
+        msgRect.anchorMax = new Vector2(0.95f, 0.85f);
+        msgRect.sizeDelta = Vector2.zero;
 
-        var msgShadow = msgObj.AddComponent<UnityEngine.UI.Shadow>();
-        msgShadow.effectColor = new Color(0, 0, 0, 0.8f);
-        msgShadow.effectDistance = new Vector2(2, -2);
+        // ── Continue Prompt ───────────────────────────────────────
+        GameObject contObj = new GameObject("ContinueText");
+        contObj.transform.SetParent(dialogPanel.transform, false);
+        _continueText = contObj.AddComponent<UnityEngine.UI.Text>();
+        _continueText.font = uiFont;
+        _continueText.fontSize = 32;
+        _continueText.fontStyle = FontStyle.Bold;
+        _continueText.color = new Color(1f, 0.85f, 0f, 1f); // Vibrant Yellow
+        _continueText.alignment = TextAnchor.LowerRight;
+        _continueText.text = "▼ SPACE hoặc Click";
+        _continueText.gameObject.SetActive(false); // Initially hidden
+        var contRect = contObj.GetComponent<RectTransform>();
+        contRect.anchorMin = new Vector2(0.7f, 0.08f);
+        contRect.anchorMax = new Vector2(0.95f, 0.22f);
+        contRect.sizeDelta = Vector2.zero;
 
-        // ── Letterbox slide-in animation ──────────────────────────
+        /*
         yield return _coroutineHost.StartCoroutine(AnimateLetterbox(letterTop, letterBot, true));
+        */
 
         // ── DIALOGUE LOOP ─────────────────────────────────────────
         if (s_betrayalDialogue == null || s_betrayalDialogue.Count == 0)
@@ -454,6 +469,7 @@ public class BossSceneTransition : MonoBehaviour
             bool isLyThong = line.speaker == "Lý Thông";
             bool isConTiep = (line.message == "Còn tiếp" || line.message == "Còn tiếp...");
 
+            /* 
             // ── Avatar dim/highlight + ring glow ─────────────────
             if (!isNarration)
             {
@@ -479,16 +495,19 @@ public class BossSceneTransition : MonoBehaviour
                 yield return _coroutineHost.StartCoroutine(LerpRingGlow(leftRingImg,  new Color(0.3f, 0.7f, 1f, 0.3f)));
                 yield return _coroutineHost.StartCoroutine(LerpRingGlow(rightRingImg, new Color(1f, 0.3f, 0.3f, 0.3f)));
             }
+            */
 
             // ── "Còn tiếp" special display ─────────────────────────
             if (isConTiep)
             {
                 // Hide dialogue panel, show giant "Còn tiếp..." centered
                 dialogPanel.SetActive(false);
+                /*
                 leftMaskObj.SetActive(false);
                 rightMaskObj.SetActive(false);
                 leftRingObj.SetActive(false);
                 rightRingObj.SetActive(false);
+                */
 
                 GameObject conTiepObj = new GameObject("ConTiepText");
                 conTiepObj.transform.SetParent(_activeCanvas.transform, false);
@@ -499,6 +518,11 @@ public class BossSceneTransition : MonoBehaviour
                 ctText.alignment = TextAnchor.MiddleCenter;
                 ctText.color = new Color(1f, 0.85f, 0.3f, 0f); // gold, start transparent
                 ctText.text = "Còn tiếp...";
+                
+                // Dim background slightly for the end screen without full black
+                GameObject endOverlay = CreateUIImage(_activeCanvas.transform, "EndOverlay", 
+                    new Color(0,0,0, 0.4f), Vector2.zero, Vector2.one);
+                endOverlay.transform.SetAsFirstSibling(); 
                 var ctRect = conTiepObj.GetComponent<RectTransform>();
                 ctRect.anchorMin = new Vector2(0.1f, 0.35f);
                 ctRect.anchorMax = new Vector2(0.9f, 0.65f);
@@ -532,14 +556,14 @@ public class BossSceneTransition : MonoBehaviour
                 msgText.alignment = TextAnchor.MiddleCenter;
                 msgText.color = new Color(0.75f, 0.85f, 1f, 1f);
             }
-            else
             {
-                string colorHex = isLyThong ? "#FF5555" : "#55CCFF";
-                nameText.text = $"<color={colorHex}>{line.speaker}</color>";
+                nameText.text = line.speaker; 
+                nameBox.SetActive(true);
 
                 msgText.fontSize = 42;
                 msgText.fontStyle = FontStyle.Normal;
                 msgText.alignment = TextAnchor.UpperLeft;
+                msgText.lineSpacing = 1.35f;
 
                 // Lý Thông betrayal lines — slightly reddish tint
                 bool isBetrayalLine = isLyThong &&
@@ -554,10 +578,15 @@ public class BossSceneTransition : MonoBehaviour
 
             msgText.text = "";
 
-            // ── Slide dialogue panel in from speaker side ────────────────────
-            float slideDir = isLyThong ? 1f : -1f; // positive = from right
-            yield return _coroutineHost.StartCoroutine(SlideDialogPanel(dialogPanel, slideDir));
+            // ── Fading slide dialogue panel ────────────────────────
+            yield return _coroutineHost.StartCoroutine(SlideDialogPanel(dialogPanel, 0f)); 
 
+            msgText.text = "";
+            if (_continueText != null) 
+            {
+                _continueText.gameObject.SetActive(false);
+                _continueText.color = new Color(1f, 0.85f, 0f, 0.8f); // Translucent yellow
+            }
             // ── Play voice audio ──────────────────────────────────
             float audioDuration = 0f;
             if (line.voiceClip != null)
@@ -582,7 +611,30 @@ public class BossSceneTransition : MonoBehaviour
             if (waitTime > 0f)
                 yield return new WaitForSecondsRealtime(waitTime);
 
-            yield return new WaitForSecondsRealtime(0.4f); // Shorter gap between lines (was 0.6s)
+            if (_continueText != null) _continueText.gameObject.SetActive(true);
+
+            // Wait for user input to continue
+            bool hasInput = false;
+            while (!hasInput)
+            {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+                // New Input System active (legacy disabled)
+                if ((Mouse.current != null && Mouse.current.leftButton != null && Mouse.current.leftButton.wasPressedThisFrame) ||
+                    (Keyboard.current != null && (Keyboard.current.spaceKey != null && Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.enterKey != null && Keyboard.current.enterKey.wasPressedThisFrame)))
+                {
+                    hasInput = true;
+                }
+#else
+                // Legacy Input system (or both enabled)
+                if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
+                {
+                    hasInput = true;
+                }
+#endif
+                yield return null;
+            }
+
+            yield return new WaitForSecondsRealtime(0.15f); // Short buffer
         }
 
         // ── Cleanup ───────────────────────────────────────────────
@@ -639,7 +691,7 @@ public class BossSceneTransition : MonoBehaviour
         // Also fade the panel alpha
         var img = panel.GetComponent<UnityEngine.UI.Image>();
         Color startColor = new Color(img.color.r, img.color.g, img.color.b, 0f);
-        Color endColor = new Color(img.color.r, img.color.g, img.color.b, 0.92f);
+        Color endColor = new Color(img.color.r, img.color.g, img.color.b, 0.5f);
 
         rt.anchoredPosition = startPos;
         img.color = startColor;

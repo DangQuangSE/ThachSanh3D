@@ -129,6 +129,20 @@ namespace StarterAssets
             bgRect.offsetMin = Vector2.zero;
             bgRect.offsetMax = Vector2.zero;
 
+            // --- Border ring (outer glow) - placed BEFORE icon so it renders behind ---
+            GameObject borderGO = new GameObject("Border");
+            borderGO.transform.SetParent(buttonGO.transform, false);
+            Image borderImg = borderGO.AddComponent<Image>();
+            borderImg.sprite = circleSprite;
+            borderImg.color = new Color(0.8f, 0.85f, 1f, 0.3f);
+            borderImg.type = Image.Type.Simple;
+            borderImg.raycastTarget = false;
+            RectTransform borderRect = borderGO.GetComponent<RectTransform>();
+            borderRect.anchorMin = Vector2.zero;
+            borderRect.anchorMax = Vector2.one;
+            borderRect.offsetMin = new Vector2(-2f, -2f);
+            borderRect.offsetMax = new Vector2(2f, 2f);
+
             // --- Icon (user drags their sprite here manually) ---
             // Uses a circular mask so any square icon becomes round
             GameObject maskGO = new GameObject("IconMask");
@@ -173,20 +187,6 @@ namespace StarterAssets
             fillRect.anchorMax = Vector2.one;
             fillRect.offsetMin = Vector2.zero;
             fillRect.offsetMax = Vector2.zero;
-
-            // --- Border ring (outer glow) ---
-            GameObject borderGO = new GameObject("Border");
-            borderGO.transform.SetParent(buttonGO.transform, false);
-            Image borderImg = borderGO.AddComponent<Image>();
-            borderImg.sprite = circleSprite;
-            borderImg.color = new Color(0.8f, 0.85f, 1f, 0.3f);
-            borderImg.type = Image.Type.Simple;
-            borderImg.raycastTarget = false;
-            RectTransform borderRect = borderGO.GetComponent<RectTransform>();
-            borderRect.anchorMin = Vector2.zero;
-            borderRect.anchorMax = Vector2.one;
-            borderRect.offsetMin = new Vector2(-2f, -2f);
-            borderRect.offsetMax = new Vector2(2f, 2f);
 
             // --- Cooldown countdown text (center) ---
             GameObject textGO = new GameObject("CooldownText");

@@ -43,7 +43,7 @@ namespace StarterAssets
         [Tooltip("Icon color when skill is ready")]
         public Color readyColor = Color.white;
         [Tooltip("Icon color when skill is on cooldown")]
-        public Color cooldownColor = new Color(0.4f, 0.4f, 0.4f, 1f);
+        public Color cooldownColor = Color.white;
         [Tooltip("Hide cooldown text when skill is ready")]
         public bool hideTextWhenReady = true;
 
@@ -68,6 +68,41 @@ namespace StarterAssets
             if (eskillCooldownFill != null) eskillCooldownFill.color = cooldownOverlayColor;
             if (protectCooldownFill != null) protectCooldownFill.color = cooldownOverlayColor;
             if (rollCooldownFill != null) rollCooldownFill.color = cooldownOverlayColor;
+
+            // Force icons to white so they display original sprite colors
+            if (ultimateIcon != null) ultimateIcon.color = Color.white;
+            if (eskillIcon != null) eskillIcon.color = Color.white;
+            if (protectIcon != null) protectIcon.color = Color.white;
+            if (rollIcon != null) rollIcon.color = Color.white;
+
+            // Fix Border overlays that wash out icon colors
+            // Border sits on top of icon in the hierarchy, making icons appear faded
+            FixBorderOverlay(ultimateIcon);
+            FixBorderOverlay(eskillIcon);
+            FixBorderOverlay(protectIcon);
+            FixBorderOverlay(rollIcon);
+        }
+
+        /// <summary>
+        /// Moves Border object behind the icon so it doesn't wash out the icon color.
+        /// Border is a sibling of IconMask in the button hierarchy.
+        /// </summary>
+        private void FixBorderOverlay(Image icon)
+        {
+            if (icon == null) return;
+
+            // Icon is inside IconMask, which is inside the button root
+            Transform maskTransform = icon.transform.parent;
+            if (maskTransform == null) return;
+            Transform buttonRoot = maskTransform.parent;
+            if (buttonRoot == null) return;
+
+            Transform border = buttonRoot.Find("Border");
+            if (border != null)
+            {
+                // Move Border to index 0 (behind everything else)
+                border.SetAsFirstSibling();
+            }
         }
 
         private void Update()
@@ -136,11 +171,8 @@ namespace StarterAssets
                 }
             }
 
-            // Update icon tint
-            if (icon != null)
-            {
-                icon.color = isReady ? readyColor : cooldownColor;
-            }
+            // Icon always keeps original sprite color (white tint = no modification)
+            // Cooldown state is shown via the fill overlay only
         }
     }
 }

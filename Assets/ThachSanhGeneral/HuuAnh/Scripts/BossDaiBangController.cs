@@ -102,7 +102,16 @@ public class BossDaiBangController : MonoBehaviour
     [Range(0f, 1f)] public float sfxVolume = 0.7f;
     // ==================== END SFX ====================
 
+    [Header("BGM")]
+    [Tooltip("Background music played when boss engages")]
+    public AudioClip bgmBoss;
+
+    [Range(0f, 1f)]
+    [Tooltip("Volume of the background music")]
+    public float bgmVolume = 0.5f;
+
     private AudioSource _audioSource;
+    private AudioSource _bgmSource;
     private float _lastHurtSoundTime;
     private bool _jumpAttackSoundPlayedThisCast;
     private bool _magicAttackSoundPlayedThisCast;
@@ -172,6 +181,16 @@ public class BossDaiBangController : MonoBehaviour
         _audioSource.minDistance = 2f;
         _audioSource.maxDistance = 25f;
         _audioSource.rolloffMode = AudioRolloffMode.Linear;
+
+        if (bgmBoss != null)
+        {
+            _bgmSource = gameObject.AddComponent<AudioSource>();
+            _bgmSource.clip = bgmBoss;
+            _bgmSource.loop = true;
+            _bgmSource.volume = bgmVolume;
+            _bgmSource.spatialBlend = 0f;
+            _bgmSource.Play();
+        }
 
         renderers = GetComponentsInChildren<Renderer>();
         originalColors = new Color[renderers.Length];
@@ -565,7 +584,7 @@ public class BossDaiBangController : MonoBehaviour
     {
         if (target == null) return;
 
-        // Lock state while any attack animation is playing — boss finishes attack before transitioning
+        // Lock state while any attack animation is playing ï¿½ boss finishes attack before transitioning
         if (currentState == BossState.Attack && IsInAnyAttackAnimation())
             return;
 
@@ -870,6 +889,23 @@ public class BossDaiBangController : MonoBehaviour
         isDead = true;
         currentState = BossState.Death;
 
+        // Force stop BGM
+        if (_bgmSource != null)
+        {
+            _bgmSource.Stop();
+            _bgmSource.volume = 0f;
+        }
+
+        // Failsafe: check all audio sources on this object just in case
+        AudioSource[] allSources = GetComponents<AudioSource>();
+        foreach(var src in allSources)
+        {
+            if (src != null && src.clip == bgmBoss && src.isPlaying)
+            {
+                src.Stop();
+            }
+        }
+
         // Use PlayClipAtPoint so death sound keeps playing after GameObject is destroyed
         if (sfxDeath != null)
             AudioSource.PlayClipAtPoint(sfxDeath, transform.position, sfxVolume);
@@ -988,3 +1024,5 @@ public class BossDaiBangController : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, maxChaseDistance);
     }
 }
+
+

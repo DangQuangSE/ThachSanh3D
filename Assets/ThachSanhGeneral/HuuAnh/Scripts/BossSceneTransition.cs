@@ -222,7 +222,7 @@ public class BossSceneTransition : MonoBehaviour
         if (s_playBetrayalDialogue && s_betrayalDialogue != null && s_betrayalDialogue.Count > 0)
         {
             Debug.Log($"<color=cyan>[BossSceneTransition] Starting dialogue — {s_betrayalDialogue.Count} lines</color>");
-            DisablePlayerInput();
+            // DisablePlayerInput(); // Removed from here, moved to after 3s delay in PlayDialogueSequence
             // Use _coroutineHost (CoroutineRunner) NOT this — boss may be destroyed!
             yield return _coroutineHost.StartCoroutine(PlayDialogueSequence());
             ResetPlayerInput();
@@ -269,8 +269,11 @@ public class BossSceneTransition : MonoBehaviour
     {
         Debug.Log("<color=cyan>[BossSceneTransition] PlayDialogueSequence started!</color>");
         
-        // 1. Initial 3 second delay after boss dies/disappears
+        // 1. Initial 3 second delay after boss dies/disappears (HUD stays visible during this)
         yield return new WaitForSecondsRealtime(3.0f); 
+
+        // Now disable input and hide HUD for the dialogue
+        DisablePlayerInput();
 
         // Freeze gameplay — dialogue uses WaitForSecondsRealtime so it isn't affected
         Time.timeScale = 0f;
@@ -829,23 +832,42 @@ public class BossSceneTransition : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     private void DisablePlayerInput()
     {
+        // 1. Disable Key Control Scripts
         MonoBehaviour[] scripts = FindObjectsOfType<MonoBehaviour>();
         foreach (var script in scripts)
         {
             if (script == null) continue;
             string n = script.GetType().Name;
             
-            // 1. Disable Control Scripts
             if (n == "PlayerAttack" || n == "PlayerInput" || n.Contains("ThirdPersonUserControl"))
             {
                 script.enabled = false;
-                DebugLog($"Disabled: {n}");
+                DebugLog($"Disabled Input: {n}");
             }
-            // 2. Hide HUD/Health Bars
-            else if (n == "PlayerHealthBarSync" || n == "HealthBarUIDaiBang")
+            // 2. Hide specific Health Bar scripts by name or containing "HealthBar"
+            else if (n.Contains("HealthBar") || n == "HealthBarUI" || n == "PlayerHealthBarSync" || n == "BossHealthBarFixedTop")
             {
                 script.gameObject.SetActive(false);
-                DebugLog($"Hidden HUD: {n}");
+                DebugLog($"Hidden script-based HUD: {n}");
+            }
+        }
+
+        // 3. Fallback: Find all Canvases and hide them if they aren't the dialogue one
+        Canvas[] canvases = FindObjectsOfType<Canvas>();
+        foreach (var c in canvases)
+        {
+            if (c.name != "BetrayalDialogueCanvas" && c.name != "Background" && !c.name.Contains("Dialogue"))
+            {
+                // Only hide if it's active
+                if (c.gameObject.activeSelf)
+                {
+                    c.gameObject.SetActive(false);
+                    // Tag it so we know to turn it back on
+                    if (!c.gameObject.name.EndsWith("_HiddenByTransition"))
+                        c.gameObject.name += "_HiddenByTransition";
+                    
+                    DebugLog($"Hidden Canvas: {c.name}");
+                }
             }
         }
     }
@@ -858,15 +880,25 @@ public class BossSceneTransition : MonoBehaviour
             if (script == null) continue;
             string n = script.GetType().Name;
             
-            // 1. Re-enable Control Scripts
             if (n == "PlayerAttack" || n == "PlayerInput" || n.Contains("ThirdPersonUserControl"))
             {
                 script.enabled = true;
             }
-            // 2. Show HUD/Health Bars
-            else if (n == "PlayerHealthBarSync" || n == "HealthBarUIDaiBang")
+            else if (n.Contains("HealthBar") || n == "HealthBarUI" || n == "PlayerHealthBarSync" || n == "BossHealthBarFixedTop")
             {
                 script.gameObject.SetActive(true);
+            }
+        }
+
+        // Restore Canvases
+        GameObject[] allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+        foreach (var obj in allObjects)
+        {
+            if (obj.name.EndsWith("_HiddenByTransition"))
+            {
+                obj.name = obj.name.Replace("_HiddenByTransition", "");
+                obj.SetActive(true);
+                DebugLog($"Restored HUD: {obj.name}");
             }
         }
     }

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 public class BossHealthBarFixedTop : MonoBehaviour
 {
     [Header("Settings")]
-    public string bossDisplayName = "Eagle Boss";
+    public string bossDisplayName = "Đại Bàng Tinh";
     public Color barColor = new Color(0.8f, 0, 0, 1f); // Deep red
     public Vector2 barSize = new Vector2(1000, 45); // Wider and taller
     public float verticalOffset = -65f; // Slightly lower from top edge

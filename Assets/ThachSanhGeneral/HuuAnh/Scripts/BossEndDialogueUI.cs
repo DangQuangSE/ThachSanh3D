@@ -39,7 +39,7 @@ public class BossEndDialogueUI : MonoBehaviour
         canvasObj = new GameObject("BossDialogueCanvas");
         Canvas canvas = canvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 999; // Render on top of everything
+        canvas.sortingOrder = 999;
 
         CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -47,56 +47,70 @@ public class BossEndDialogueUI : MonoBehaviour
 
         canvasObj.AddComponent<GraphicRaycaster>();
 
-        // 2. Background
-        GameObject bgObj = new GameObject("BackgroundDialog");
-        bgObj.transform.SetParent(canvasObj.transform, false);
-        background = bgObj.AddComponent<Image>();
-        background.color = new Color(0, 0, 0, 0.95f); // Very dark screen
-        RectTransform bgRect = bgObj.GetComponent<RectTransform>();
-        bgRect.anchorMin = Vector2.zero;
-        bgRect.anchorMax = Vector2.one;
-        bgRect.sizeDelta = Vector2.zero;
+        // 2. Main Dialogue Panel (Bottom Container)
+        GameObject panelObj = new GameObject("DialoguePanel");
+        panelObj.transform.SetParent(canvasObj.transform, false);
+        background = panelObj.AddComponent<Image>();
+        background.color = new Color(0, 0, 0, 0.75f); // Semi-transparent black
+        RectTransform panelRect = panelObj.GetComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0, 0);
+        panelRect.anchorMax = new Vector2(1, 0.28f); // Bottom 28% of screen
+        panelRect.pivot = new Vector2(0.5f, 0);
+        panelRect.sizeDelta = Vector2.zero;
 
-        // 3. Speaker Text
+        // 3. Name Box Container
+        GameObject nameBoxObj = new GameObject("NameBox");
+        nameBoxObj.transform.SetParent(panelObj.transform, false);
+        Image nameBg = nameBoxObj.AddComponent<Image>();
+        nameBg.color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
+        RectTransform nameBoxRect = nameBoxObj.GetComponent<RectTransform>();
+        nameBoxRect.anchorMin = new Vector2(0.1f, 1.0f);
+        nameBoxRect.anchorMax = new Vector2(0.3f, 1.15f); // Sits slightly above the main panel
+        nameBoxRect.pivot = new Vector2(0.5f, 0);
+        nameBoxRect.sizeDelta = Vector2.zero;
+
+        // 4. Speaker Text
         GameObject speakerObj = new GameObject("SpeakerText");
-        speakerObj.transform.SetParent(bgObj.transform, false);
+        speakerObj.transform.SetParent(nameBoxObj.transform, false);
         speakerText = speakerObj.AddComponent<Text>();
         speakerText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        speakerText.fontSize = 60;
+        speakerText.fontSize = 45;
         speakerText.fontStyle = FontStyle.Bold;
-        speakerText.alignment = TextAnchor.LowerLeft;
+        speakerText.alignment = TextAnchor.MiddleCenter;
+        speakerText.color = Color.white;
         speakerText.supportRichText = true;
         RectTransform spkRect = speakerObj.GetComponent<RectTransform>();
-        spkRect.anchorMin = new Vector2(0.15f, 0.65f);
-        spkRect.anchorMax = new Vector2(0.85f, 0.75f);
+        spkRect.anchorMin = Vector2.zero;
+        spkRect.anchorMax = Vector2.one;
         spkRect.sizeDelta = Vector2.zero;
 
-        // 4. Dialogue Text
+        // 5. Dialogue Text
         GameObject dialogObj = new GameObject("DialogueText");
-        dialogObj.transform.SetParent(bgObj.transform, false);
+        dialogObj.transform.SetParent(panelObj.transform, false);
         dialogueText = dialogObj.AddComponent<Text>();
         dialogueText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        dialogueText.fontSize = 50;
+        dialogueText.fontSize = 42;
         dialogueText.alignment = TextAnchor.UpperLeft;
         dialogueText.supportRichText = true;
+        dialogueText.color = Color.white;
         RectTransform dlgRect = dialogObj.GetComponent<RectTransform>();
-        dlgRect.anchorMin = new Vector2(0.15f, 0.25f);
-        dlgRect.anchorMax = new Vector2(0.85f, 0.60f);
+        dlgRect.anchorMin = new Vector2(0.12f, 0.25f);
+        dlgRect.anchorMax = new Vector2(0.88f, 0.85f);
         dlgRect.sizeDelta = Vector2.zero;
 
-        // 5. Continue Prompt
+        // 6. Continue Prompt
         GameObject continueObj = new GameObject("ContinueText");
-        continueObj.transform.SetParent(bgObj.transform, false);
+        continueObj.transform.SetParent(panelObj.transform, false);
         continueText = continueObj.AddComponent<Text>();
         continueText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        continueText.fontSize = 35;
-        continueText.fontStyle = FontStyle.Italic;
-        continueText.color = new Color(1, 1, 1, 0.6f);
+        continueText.fontSize = 32;
+        continueText.fontStyle = FontStyle.Bold;
+        continueText.color = new Color(1f, 0.85f, 0f, 1f); // Vibrant Yellow
         continueText.alignment = TextAnchor.LowerRight;
-        continueText.text = "Nhấn chuột hoặc phím Space để tiếp tục...";
+        continueText.text = "▼ SPACE hoặc Click";
         RectTransform contRect = continueObj.GetComponent<RectTransform>();
-        contRect.anchorMin = new Vector2(0.5f, 0.05f);
-        contRect.anchorMax = new Vector2(0.95f, 0.15f);
+        contRect.anchorMin = new Vector2(0.7f, 0.08f);
+        contRect.anchorMax = new Vector2(0.95f, 0.22f);
         contRect.sizeDelta = Vector2.zero;
 
         canvasObj.SetActive(false);
@@ -130,10 +144,10 @@ public class BossEndDialogueUI : MonoBehaviour
             }
             else
             {
-                speakerText.text = line.speakerName + ":";
-                speakerText.color = line.speakerName == "Thạch Sanh" ? new Color(0.3f, 0.8f, 1f) : new Color(1f, 0.3f, 0.2f); // Blue for Thach Sanh, Red for Ly Thong
+                speakerText.text = line.speakerName;
+                speakerText.color = Color.white;
                 dialogueText.alignment = TextAnchor.UpperLeft;
-                dialogueText.fontSize = 50;
+                dialogueText.fontSize = 42;
                 dialogueText.fontStyle = FontStyle.Normal;
                 dialogueText.color = Color.white;
             }

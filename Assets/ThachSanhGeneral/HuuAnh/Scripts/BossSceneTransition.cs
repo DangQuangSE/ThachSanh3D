@@ -60,6 +60,12 @@ public class BossSceneTransition : MonoBehaviour
     [Range(0.01f, 0.2f)]
     public float typewriterSpeed = 0.04f;
 
+    [Tooltip("Thời gian chờ tự động chuyển sang câu tiếp theo")]
+    public float autoSkipTime = 3f;
+
+    [Tooltip("Thời gian delay tối thiểu để có thể ấn next sang câu khác (giây)")]
+    public float skipDelay = 0.5f;
+
     [Header("References")]
     [Tooltip("Auto-find BossDaiBangController if not assigned")]
     public BossDaiBangController bossDaiBang;
@@ -92,6 +98,8 @@ public class BossSceneTransition : MonoBehaviour
     private static Sprite s_lyThongAvatar;
     private static AudioClip s_betrayalBGM;
     private static float s_typewriterSpeed;
+    private static float s_autoSkipTime;
+    private static float s_skipDelay;
     private static GameObject s_victoryPanel;
 
     // Coroutine host — the persistent CoroutineRunner, not the boss object
@@ -103,6 +111,17 @@ public class BossSceneTransition : MonoBehaviour
     private static bool s_transitionInProgress = false; // Prevent multiple triggers/overwrites
     private GameObject _activeCanvas; // Track current dialogue canvas for cleanup
     private UnityEngine.UI.Text _continueText; // Track continue prompt
+
+    // ── Dialogue state (QuestDialogue pattern) ────────────────────
+    private static bool  _dlg_isTyping       = false;
+    private static bool  _dlg_canContinue    = false;
+    private static bool  _dlg_dialogueDone   = false;
+    private static string _dlg_fullLine       = "";
+    private static UnityEngine.UI.Text _dlg_msgText = null;
+    private static Coroutine _dlg_typeCoroutine    = null;
+    private static int   _dlg_currentIndex   = 0;
+    // Callback invoked by OnContinuePressed to advance to next line
+    private static System.Action _dlg_onAdvance = null;
 
     void Start()
     {
@@ -183,6 +202,8 @@ public class BossSceneTransition : MonoBehaviour
             s_lyThongAvatar = lyThongAvatarSprite;
             s_betrayalBGM = betrayalBackgroundMusic;
             s_typewriterSpeed = typewriterSpeed;
+            s_autoSkipTime = autoSkipTime;
+            s_skipDelay = skipDelay;
             s_victoryPanel = victoryPanel;
             snapshot_dialogueVolume = dialogueVolume;
             snapshot_bgmVolume = backgroundMusicVolume;
@@ -211,7 +232,47 @@ public class BossSceneTransition : MonoBehaviour
             yield return StartCoroutine(coroutine);
             Destroy(gameObject);
         }
+
+        // CoroutineRunner sống suốt cả dialogue (DontDestroyOnLoad).
+        // Đọc input ở đây mỗi frame — đúng như QuestDialogue.Update().
+        void Update()
+        {
+            bool pressed = false;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            pressed = (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) ||
+                      (Keyboard.current != null && (Keyboard.current.spaceKey.wasPressedThisFrame ||
+                                                    Keyboard.current.enterKey.wasPressedThisFrame));
+#else
+            pressed = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return);
+#endif
+            if (pressed) OnContinuePressed();
+        }
     }
+
+    // ── Giống OnContinueClicked() của QuestDialogue ──────────────
+    // Nếu đang gõ typewriter → skip toàn bộ text
+    // Nếu đã xong và _dlg_canContinue → gọi callback advance
+    private static void OnContinuePressed()
+    {
+        if (_dlg_isTyping)
+        {
+            // Skip typewriter: dừng coroutine, hiện toàn bộ text
+            if (_dlg_typeCoroutine != null && _coroutineHost != null)
+                _coroutineHost.StopCoroutine(_dlg_typeCoroutine);
+            _dlg_typeCoroutine = null;
+            _dlg_isTyping = false;
+            _dlg_canContinue = true;
+            if (_dlg_msgText != null) _dlg_msgText.text = _dlg_fullLine;
+            return;
+        }
+
+        if (_dlg_canContinue)
+        {
+            _dlg_canContinue = false;
+            _dlg_onAdvance?.Invoke();
+        }
+    }
+
 
     private IEnumerator TransitionToNextScene()
     {
@@ -461,59 +522,44 @@ public class BossSceneTransition : MonoBehaviour
         yield return _coroutineHost.StartCoroutine(AnimateLetterbox(letterTop, letterBot, true));
         */
 
-        // ── DIALOGUE LOOP ─────────────────────────────────────────
+        // ── DIALOGUE LOOP (QuestDialogue pattern) ─────────────────
+        // Coroutine KHÔNG bao giờ yield chờ input.
+        // Input được đọc trong CoroutineRunner.Update() → OnContinuePressed() → _dlg_onAdvance().
         if (s_betrayalDialogue == null || s_betrayalDialogue.Count == 0)
         {
             DebugLog("PlayDialogueSequence: s_betrayalDialogue is EMPTY!");
             yield break;
         }
 
-        foreach (var line in s_betrayalDialogue)
-        {
-            bool isNarration = string.IsNullOrEmpty(line.speaker);
-            bool isLyThong = line.speaker == "Lý Thông";
-            bool isConTiep = (line.message == "Còn tiếp" || line.message == "Còn tiếp...");
+        _dlg_dialogueDone = false;
+        _dlg_msgText = msgText;
 
-            /* 
-            // ── Avatar dim/highlight + ring glow ─────────────────
-            if (!isNarration)
+        int lineCount = s_betrayalDialogue.Count;
+        // lineIndex được điều khiển bởi callback _dlg_onAdvance, không bởi foreach
+        _dlg_currentIndex = 0;
+
+        // Hàm hiển thị 1 dòng (giống ShowLine của QuestDialogue)
+        System.Action<int> showLine = null;
+        showLine = (idx) =>
+        {
+            if (idx >= lineCount)
             {
-                if (isLyThong)
-                {
-                    yield return _coroutineHost.StartCoroutine(LerpAvatarState(leftAvatarImg,  false));
-                    yield return _coroutineHost.StartCoroutine(LerpAvatarState(rightAvatarImg, true));
-                    yield return _coroutineHost.StartCoroutine(LerpRingGlow(leftRingImg,  new Color(0.3f, 0.7f, 1f, 0.3f)));
-                    yield return _coroutineHost.StartCoroutine(LerpRingGlow(rightRingImg, new Color(1f, 0.3f, 0.3f, 1.0f)));
-                }
-                else
-                {
-                    yield return _coroutineHost.StartCoroutine(LerpAvatarState(leftAvatarImg,  true));
-                    yield return _coroutineHost.StartCoroutine(LerpAvatarState(rightAvatarImg, false));
-                    yield return _coroutineHost.StartCoroutine(LerpRingGlow(leftRingImg,  new Color(0.3f, 0.7f, 1f, 1.0f)));
-                    yield return _coroutineHost.StartCoroutine(LerpRingGlow(rightRingImg, new Color(1f, 0.3f, 0.3f, 0.3f)));
-                }
+                // Hết dialogue
+                _dlg_isTyping     = false;
+                _dlg_canContinue  = false;
+                _dlg_dialogueDone = true;
+                return;
             }
-            else
-            {
-                yield return _coroutineHost.StartCoroutine(LerpAvatarState(leftAvatarImg,  false));
-                yield return _coroutineHost.StartCoroutine(LerpAvatarState(rightAvatarImg, false));
-                yield return _coroutineHost.StartCoroutine(LerpRingGlow(leftRingImg,  new Color(0.3f, 0.7f, 1f, 0.3f)));
-                yield return _coroutineHost.StartCoroutine(LerpRingGlow(rightRingImg, new Color(1f, 0.3f, 0.3f, 0.3f)));
-            }
-            */
+
+            var line       = s_betrayalDialogue[idx];
+            bool isNarration = string.IsNullOrEmpty(line.speaker);
+            bool isLyThong   = line.speaker == "Lý Thông";
+            bool isConTiep   = (line.message == "Còn tiếp" || line.message == "Còn tiếp...");
 
             // ── "Còn tiếp" special display ─────────────────────────
             if (isConTiep)
             {
-                // Hide dialogue panel, show giant "Còn tiếp..." centered
                 dialogPanel.SetActive(false);
-                /*
-                leftMaskObj.SetActive(false);
-                rightMaskObj.SetActive(false);
-                leftRingObj.SetActive(false);
-                rightRingObj.SetActive(false);
-                */
-
                 GameObject conTiepObj = new GameObject("ConTiepText");
                 conTiepObj.transform.SetParent(_activeCanvas.transform, false);
                 var ctText = conTiepObj.AddComponent<UnityEngine.UI.Text>();
@@ -521,38 +567,26 @@ public class BossSceneTransition : MonoBehaviour
                 ctText.fontSize = 100;
                 ctText.fontStyle = FontStyle.Bold;
                 ctText.alignment = TextAnchor.MiddleCenter;
-                ctText.color = new Color(1f, 0.85f, 0.3f, 0f); // gold, start transparent
+                ctText.color = new Color(1f, 0.85f, 0.3f, 0f);
                 ctText.text = "Còn tiếp...";
-                
-                // Dim background slightly for the end screen without full black
-                GameObject endOverlay = CreateUIImage(_activeCanvas.transform, "EndOverlay", 
+                GameObject endOverlay = CreateUIImage(_activeCanvas.transform, "EndOverlay",
                     new Color(0,0,0, 0.4f), Vector2.zero, Vector2.one);
-                endOverlay.transform.SetAsFirstSibling(); 
+                endOverlay.transform.SetAsFirstSibling();
                 var ctRect = conTiepObj.GetComponent<RectTransform>();
                 ctRect.anchorMin = new Vector2(0.1f, 0.35f);
                 ctRect.anchorMax = new Vector2(0.9f, 0.65f);
                 ctRect.offsetMin = Vector2.zero;
                 ctRect.offsetMax = Vector2.zero;
-
                 var ctShadow = conTiepObj.AddComponent<UnityEngine.UI.Shadow>();
                 ctShadow.effectColor = new Color(0.8f, 0.5f, 0f, 0.8f);
                 ctShadow.effectDistance = new Vector2(3, -3);
 
-                // Fade in
-                yield return _coroutineHost.StartCoroutine(FadeTextAlpha(ctText, 0f, 1f, 1.2f));
-                yield return new WaitForSecondsRealtime(1.8f); // Reduced wait (was 2.5s)
-                
-                // CRITICAL: DO NOT fade out or destroy canvas here.
-                // Leave it visible for TransitionToNextScene to handle.
-                
-                // Stop background music
-                if (_backgroundMusicSource.isPlaying)
-                    _backgroundMusicSource.Stop();
-
-                yield break; // Exit sequence early, keeping Canvas on screen ────────────────
+                // Fade in rồi kết thúc — dùng coroutine riêng
+                _coroutineHost.StartCoroutine(ShowConTiepAndFinish(ctText));
+                return;
             }
 
-            // ── Speaker name & bubble color ───────────────────────
+            // ── Style text theo loại dòng ──────────────────────────
             if (isNarration)
             {
                 nameText.text = "";
@@ -561,94 +595,93 @@ public class BossSceneTransition : MonoBehaviour
                 msgText.alignment = TextAnchor.MiddleCenter;
                 msgText.color = new Color(0.75f, 0.85f, 1f, 1f);
             }
+            else
             {
-                nameText.text = line.speaker; 
+                nameText.text = line.speaker;
                 nameBox.SetActive(true);
-
                 msgText.fontSize = 42;
                 msgText.fontStyle = FontStyle.Normal;
                 msgText.alignment = TextAnchor.UpperLeft;
                 msgText.lineSpacing = 1.35f;
-
-                // Lý Thông betrayal lines — slightly reddish tint
                 bool isBetrayalLine = isLyThong &&
                     (line.message.Contains("một mình ta hưởng") ||
                      line.message.Contains("lấp kín") ||
                      line.message.Contains("kế hoạch"));
-
                 msgText.color = isBetrayalLine
                     ? new Color(1f, 0.85f, 0.85f, 1f)
                     : new Color(0.95f, 0.95f, 0.95f, 1f);
             }
 
-            msgText.text = "";
+            // ── Ẩn continue hint ───────────────────────────────────
+            if (_continueText != null) _continueText.gameObject.SetActive(false);
 
-            // ── Fading slide dialogue panel ────────────────────────
-            yield return _coroutineHost.StartCoroutine(SlideDialogPanel(dialogPanel, 0f)); 
-
-            msgText.text = "";
-            if (_continueText != null) 
-            {
-                _continueText.gameObject.SetActive(false);
-                _continueText.color = new Color(1f, 0.85f, 0f, 0.8f); // Translucent yellow
-            }
-            // ── Play voice audio ──────────────────────────────────
-            float audioDuration = 0f;
+            // ── Play audio ─────────────────────────────────────────
             if (line.voiceClip != null)
             {
                 if (_dialogueAudioSource.isPlaying) _dialogueAudioSource.Stop();
                 _dialogueAudioSource.clip = line.voiceClip;
                 _dialogueAudioSource.Play();
-                audioDuration = line.voiceClip.length;
             }
 
-            // ── Typewriter effect ─────────────────────────────────
-            float typewriterDuration = 0f;
-            for (int i = 0; i < line.message.Length; i++)
+            // ── Set advance callback TRƯỚC khi bắt đầu typewriter ──
+            _dlg_onAdvance = () =>
             {
-                msgText.text += line.message[i];
-                typewriterDuration += s_typewriterSpeed;
-                yield return new WaitForSecondsRealtime(s_typewriterSpeed);
-            }
+                _dlg_currentIndex = idx + 1;
+                showLine(_dlg_currentIndex);
+            };
 
-            // ── Auto-advance: wait for longest of audio or typewriter + small buffer ──
-            float waitTime = Mathf.Max(audioDuration, typewriterDuration) - typewriterDuration;
-            if (waitTime > 0f)
-                yield return new WaitForSecondsRealtime(waitTime);
+            // ── Bắt đầu typewriter (giống TypeLine của QuestDialogue)
+            _dlg_fullLine = line.message;
+            _dlg_isTyping = true;
+            _dlg_canContinue = false;
+            if (_dlg_typeCoroutine != null) _coroutineHost.StopCoroutine(_dlg_typeCoroutine);
+            _dlg_typeCoroutine = _coroutineHost.StartCoroutine(TypewriterAndThenWait(line.message, msgText));
+        };
 
-            if (_continueText != null) _continueText.gameObject.SetActive(true);
+        // Bắt đầu câu đầu tiên
+        showLine(0);
 
-            // Wait for user input to continue
-            bool hasInput = false;
-            while (!hasInput)
-            {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-                // New Input System active (legacy disabled)
-                if ((Mouse.current != null && Mouse.current.leftButton != null && Mouse.current.leftButton.wasPressedThisFrame) ||
-                    (Keyboard.current != null && (Keyboard.current.spaceKey != null && Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.enterKey != null && Keyboard.current.enterKey.wasPressedThisFrame)))
-                {
-                    hasInput = true;
-                }
-#else
-                // Legacy Input system (or both enabled)
-                if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
-                {
-                    hasInput = true;
-                }
-#endif
-                yield return null;
-            }
-
-            yield return new WaitForSecondsRealtime(0.15f); // Short buffer
-        }
+        // Coroutine chỉ yield chờ _dlg_dialogueDone — KHÔNG chờ input
+        while (!_dlg_dialogueDone)
+            yield return null;
 
         // ── Cleanup ───────────────────────────────────────────────
+        _dlg_onAdvance = null;
         if (_backgroundMusicSource.isPlaying) _backgroundMusicSource.Stop();
         if (_dialogueAudioSource.isPlaying) _dialogueAudioSource.Stop();
 
         yield return new WaitForSecondsRealtime(0.3f);
         if (_activeCanvas != null) Object.Destroy(_activeCanvas);
     }
+
+    // Typewriter rồi hiện continue hint — giống TypeLine() của QuestDialogue
+    private IEnumerator TypewriterAndThenWait(string fullText, UnityEngine.UI.Text target)
+    {
+        target.text = "";
+        foreach (char c in fullText)
+        {
+            target.text += c;
+            yield return new WaitForSecondsRealtime(s_typewriterSpeed);
+        }
+        // Typewriter xong
+        _dlg_isTyping    = false;
+        _dlg_canContinue = true;
+        if (_continueText != null) _continueText.gameObject.SetActive(true);
+    }
+
+    // Fade in "Còn tiếp..." rồi đánh dấu xong
+    private IEnumerator ShowConTiepAndFinish(UnityEngine.UI.Text ctText)
+    {
+        yield return _coroutineHost.StartCoroutine(FadeTextAlpha(ctText, 0f, 1f, 1.2f));
+        yield return new WaitForSecondsRealtime(1.8f);
+        if (_backgroundMusicSource != null && _backgroundMusicSource.isPlaying)
+            _backgroundMusicSource.Stop();
+        _dlg_isTyping     = false;
+        _dlg_canContinue  = false;
+        _dlg_dialogueDone = true;
+    }
+
+
 
     // ─────────────────────────────────────────────────────────────
     //  ANIMATION HELPERS

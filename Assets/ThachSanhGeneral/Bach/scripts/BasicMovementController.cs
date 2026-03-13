@@ -153,6 +153,10 @@ namespace StarterAssets
             _fallTimeoutDelta = FallTimeout;
 
             Debug.Log("[BasicMovementController] Initialized - Movement only mode (no combat/skills)");
+
+            // Lock cursor when start
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
 
         private void Update()
@@ -269,8 +273,11 @@ namespace StarterAssets
             Vector3 targetDirection = Quaternion.Euler(0.0f, _targetRotation, 0.0f) * Vector3.forward;
 
             // move the player
-            _controller.Move(targetDirection.normalized * (_speed * Time.deltaTime) +
-                             new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
+            if (_controller != null && _controller.enabled && gameObject.activeInHierarchy)
+            {
+                _controller.Move(targetDirection.normalized * (_speed * Time.deltaTime) +
+                                 new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
+            }
 
             // update animator if using character
             if (_hasAnimator)
@@ -282,6 +289,13 @@ namespace StarterAssets
 
         private void JumpAndGravity()
         {
+            // Ch?n nh?y n?u ?ang h?i tho?i
+            QuestDialogue questDialogue = FindObjectOfType<QuestDialogue>();
+            if (questDialogue != null && questDialogue.GetType().GetField("_isDialogueOpen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(questDialogue) is bool isDialogueOpen && isDialogueOpen)
+            {
+                _input.jump = false;
+            }
+
             if (Grounded)
             {
                 // reset the fall timeout timer

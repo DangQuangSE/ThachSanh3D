@@ -17,7 +17,8 @@ public class EagleBossIntroPlayer : MonoBehaviour
     [Tooltip("Allow the user to skip the video by pressing a key?")]
     public bool allowSkip = true;
 
-    private bool isTransitioning = false;
+    private AsyncOperation asyncLoad;
+    private bool isTransitioning = false; // Added to avoid missing identifier errors
 
     void Start()
     {
@@ -30,11 +31,29 @@ public class EagleBossIntroPlayer : MonoBehaviour
         {
             // Subscribe to the loop point reached event to know when the video finishes
             videoPlayer.loopPointReached += OnVideoEnd;
+            
+            // Start preloading the scene immediately in the background
+            StartCoroutine(PreloadSceneAsync());
         }
         else
         {
             Debug.LogError("EagleBossIntroPlayer: No VideoPlayer component found! Loading next scene immediately.", this);
-            LoadNextScene();
+            LoadNextScene(true);
+        }
+    }
+
+    private IEnumerator PreloadSceneAsync()
+    {
+        // Start loading the scene asynchronously
+        asyncLoad = SceneManager.LoadSceneAsync(nextSceneName);
+        
+        // Prevent the scene from activating until we are ready
+        asyncLoad.allowSceneActivation = false;
+
+        // Wait until the asynchronous scene fully loads (it stops at 0.9 progress when allowSceneActivation is false)
+        while (asyncLoad.progress < 0.9f)
+        {
+            yield return null;
         }
     }
 
@@ -61,15 +80,15 @@ public class EagleBossIntroPlayer : MonoBehaviour
 
     private void OnVideoEnd(VideoPlayer vp)
     {
-        LoadNextScene();
+        LoadNextScene(false);
     }
 
     public void SkipVideo()
     {
-        LoadNextScene();
+        LoadNextScene(false);
     }
 
-    private void LoadNextScene()
+    private void LoadNextScene(bool immediate)
     {
         if (isTransitioning) return;
         isTransitioning = true;
@@ -79,7 +98,16 @@ public class EagleBossIntroPlayer : MonoBehaviour
             videoPlayer.Stop();
         }
 
-        Debug.Log("Intro video ended/skipped. Loading scene: " + nextSceneName);
-        SceneManager.LoadScene(nextSceneName);
+        Debug.Log("Intro video ended/skipped. Activating preloaded scene: " + nextSceneName);
+        
+        if (immediate || asyncLoad == null)
+        {
+            SceneManager.LoadScene(nextSceneName);
+        }
+        else
+        {
+            // Allow the preloaded scene to activate instantly
+            asyncLoad.allowSceneActivation = true;
+        }
     }
 }

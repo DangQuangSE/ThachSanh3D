@@ -74,6 +74,8 @@ public class MainMenu : MonoBehaviour
 
     private void Start()
     {
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
         Time.timeScale = 1f;
 
         // Phát nh?c n?n

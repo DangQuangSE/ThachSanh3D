@@ -11,6 +11,10 @@ public class BossEndDialogueUI : MonoBehaviour
     private Text continueText;
     private Image background;
 
+    [Header("Settings")]
+    public float autoSkipTime = 3f; // Thời gian chờ tự động chuyển sang câu tiếp theo
+    public float skipDelay = 0.5f; // Thời gian delay tối thiểu để có thể ấn next sang câu khác (giây)
+
     private bool isWaitingForInput = false;
 
     private struct Line
@@ -152,18 +156,33 @@ public class BossEndDialogueUI : MonoBehaviour
                 dialogueText.color = Color.white;
             }
 
-            yield return StartCoroutine(TypewriterEffect(line.text));
+            bool wasSkipped = false;
+            yield return StartCoroutine(TypewriterEffect(line.text, (skipped) => wasSkipped = skipped));
 
-            // Wait a tiny bit so player doesn't accidentally skip immediately
-            yield return new WaitForSeconds(0.15f);
+            // Nếu người dùng skip typewriter bằng phím, đợi họ nhả phím ra trước
+            if (wasSkipped)
+            {
+                while (Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.Return))
+                    yield return null;
+            }
+
+            // Thêm delay skipDelay trước khi nhận input tiếp
+            yield return new WaitForSeconds(skipDelay);
 
             isWaitingForInput = true;
-            // Clear any lingering input queue
-            Input.ResetInputAxes();
+            float waitTimer = 0f;
+            continueText.gameObject.SetActive(true);
 
             while (isWaitingForInput)
             {
+                waitTimer += Time.deltaTime;
+
                 if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
+                {
+                    isWaitingForInput = false;
+                }
+
+                if (waitTimer >= autoSkipTime)
                 {
                     isWaitingForInput = false;
                 }
@@ -178,7 +197,7 @@ public class BossEndDialogueUI : MonoBehaviour
         canvasObj.SetActive(false);
     }
 
-    private IEnumerator TypewriterEffect(string fullText)
+    private IEnumerator TypewriterEffect(string fullText, System.Action<bool> onDone = null)
     {
         dialogueText.text = "";
         continueText.gameObject.SetActive(false);
@@ -186,13 +205,15 @@ public class BossEndDialogueUI : MonoBehaviour
         string currentText = "";
         bool inTag = false;
         float typeSpeed = 0.03f;
+        bool skipped = false;
 
         for (int i = 0; i < fullText.Length; i++)
         {
-            // Allow skip
+            // Allow skip typewriter only
             if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
             {
                 dialogueText.text = fullText;
+                skipped = true;
                 break;
             }
 
@@ -215,6 +236,7 @@ public class BossEndDialogueUI : MonoBehaviour
             }
         }
 
+        onDone?.Invoke(skipped);
         continueText.gameObject.SetActive(true);
         yield return null;
     }

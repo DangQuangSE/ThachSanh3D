@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Collections;
@@ -41,8 +41,8 @@ public class QuestDialogue : MonoBehaviour
     [Tooltip("Phím t??ng tác")]
     public KeyCode interactKey = KeyCode.F;
 
-    [Tooltip("Phím tiếp tục hội thoại (Space hoặc Click chuột)")]
-    public KeyCode continueKey = KeyCode.Space;
+    [Tooltip("Phím tiếp tục hội thoại (Enter hoặc Click chuột)")]
+    public KeyCode continueKey = KeyCode.Return;
 
     [Tooltip("Tag c?a player")]
     public string playerTag = "Player";
@@ -50,7 +50,7 @@ public class QuestDialogue : MonoBehaviour
     [Tooltip("Hi?n g?i ý nhấn F khi ??n gàn")]
     public GameObject interactHint;
 
-    [Tooltip("Hint tiếp tục - VD: 'Nhấn SPACE hoặc Click để tiếp tục'")]
+    [Tooltip("Hint tiếp tục - VD: 'Nhấn ENTER hoặc Click để tiếp tục'")]
     public GameObject continueHint;
 
     // ?? UI (Legacy Text) ???????????????????????????????????????????????????
@@ -463,7 +463,7 @@ public class QuestDialogue : MonoBehaviour
 #if ENABLE_INPUT_SYSTEM
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null) return false;
-        return keyboard.spaceKey.wasPressedThisFrame;
+        return keyboard.enterKey.wasPressedThisFrame;
 #else
         return Input.GetKeyDown(continueKey);
 #endif
@@ -652,15 +652,15 @@ public class QuestDialogue : MonoBehaviour
         string hintText;
         if (_isEndingDialogue && isLastLine)
         {
-            hintText = "▼ SPACE - Quay về Main Menu";
+            hintText = "▼ ENTER - Quay về Main Menu";
         }
         else if (isLastLine)
         {
-            hintText = "▼ SPACE - Kết thúc";
+            hintText = "▼ ENTER - Kết thúc";
         }
         else
         {
-            hintText = "▼ SPACE hoặc Click";
+            hintText = "▼ ENTER hoặc Click";
         }
         
         SetText(null, continueHintTextTMP, hintText);
